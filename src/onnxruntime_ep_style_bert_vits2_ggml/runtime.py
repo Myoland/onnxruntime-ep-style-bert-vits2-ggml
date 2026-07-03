@@ -9,7 +9,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from onnxruntime_ep_style_bert_vits2_ggml import (
     get_ep_name,
@@ -17,6 +17,7 @@ from onnxruntime_ep_style_bert_vits2_ggml import (
 )
 
 ProviderSetting = str | tuple[str, dict[str, Any]]
+BuiltinProvider = Literal["cuda", "directml"]
 DEFAULT_REGISTRATION_NAME = "style_bert_vits2_onnx_plugin_ep"
 
 _INFERENCE_SESSION_PATCH_LOCK = threading.RLock()
@@ -148,6 +149,93 @@ def build_execution_provider_config(
         registration_name=registration_name,
         strict=strict,
     )
+
+
+def cpu_execution_providers() -> list[ProviderSetting]:
+    """Return the downstream Engine CPU provider chain."""
+
+    return [("CPUExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"})]
+
+
+def directml_execution_providers() -> list[ProviderSetting]:
+    """Return the downstream Engine DirectML provider chain."""
+
+    return [
+        ("DmlExecutionProvider", {"device_id": 0}),
+        *cpu_execution_providers(),
+    ]
+
+
+def cuda_execution_providers(
+    *,
+    available_providers: Sequence[str],
+    enable_directml_fallback: bool,
+) -> list[ProviderSetting]:
+    """Return the downstream Engine CUDA provider chain."""
+
+    providers: list[ProviderSetting] = [
+        (
+            "CUDAExecutionProvider",
+            {
+                "arena_extend_strategy": "kSameAsRequested",
+                "cudnn_conv_algo_search": "DEFAULT",
+            },
+        ),
+    ]
+    if enable_directml_fallback and "DmlExecutionProvider" in available_providers:
+        providers.append(("DmlExecutionProvider", {"device_id": 0}))
+    providers.extend(cpu_execution_providers())
+    return providers
+
+
+def select_builtin_execution_providers(
+    *,
+    use_gpu: bool,
+    available_providers: Sequence[str],
+    preferred_provider: BuiltinProvider | None = None,
+    logger: Any | None = None,
+) -> list[ProviderSetting]:
+    """Select the ordinary ONNX Runtime provider chain used before Plugin EP setup."""
+
+    if not use_gpu:
+        _log_info(logger, "Using CPU for inference.")
+        return cpu_execution_providers()
+
+    if preferred_provider == "cuda":
+        if "CUDAExecutionProvider" in available_providers:
+            _log_info(logger, "Using GPU (NVIDIA CUDA) for inference.")
+            return cuda_execution_providers(
+                available_providers=available_providers,
+                enable_directml_fallback=False,
+            )
+        _log_warning(
+            logger,
+            "Requested GPU (NVIDIA CUDA) is not available. Using CPU instead.",
+        )
+        return cpu_execution_providers()
+
+    if preferred_provider == "directml":
+        if "DmlExecutionProvider" in available_providers:
+            _log_info(logger, "Using GPU (DirectML) for inference.")
+            return directml_execution_providers()
+        _log_warning(
+            logger, "Requested GPU (DirectML) is not available. Using CPU instead."
+        )
+        return cpu_execution_providers()
+
+    if "CUDAExecutionProvider" in available_providers:
+        _log_info(logger, "Using GPU (NVIDIA CUDA) for inference.")
+        return cuda_execution_providers(
+            available_providers=available_providers,
+            enable_directml_fallback=True,
+        )
+
+    if "DmlExecutionProvider" in available_providers:
+        _log_info(logger, "Using GPU (DirectML) for inference.")
+        return directml_execution_providers()
+
+    _log_warning(logger, "GPU is not available. Using CPU instead.")
+    return cpu_execution_providers()
 
 
 def configure_execution_provider(

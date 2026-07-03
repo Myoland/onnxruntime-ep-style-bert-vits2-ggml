@@ -30,13 +30,10 @@ _ENGINE_DIR = Path(os.environ.get("AIVIS_ENGINE_DIR", Path.cwd())).resolve()
 if str(_ENGINE_DIR) not in sys.path:
     sys.path.insert(0, str(_ENGINE_DIR))
 
-from run import _resolve_default_onnx_ep_library_path
 from voicevox_engine.aivm_manager import AivmManager
 from voicevox_engine.metas.metas import StyleId
 from voicevox_engine.model import AudioQuery
 from voicevox_engine.tts_pipeline.style_bert_vits2_tts_engine import (
-    BuiltinOnnxProvider,
-    OnnxPluginExecutionProviderConfig,
     StyleBertVITS2TTSEngine,
 )
 from voicevox_engine.utility.aivishub_client import (
@@ -50,6 +47,15 @@ from onnxruntime_ep_style_bert_vits2_ggml.engine_cache import (
     DEFAULT_GGUF_CONVERTER_VERSION,
     F16_GGUF_CONVERTER_VERSION,
     F32_GGUF_CONVERTER_VERSION,
+)
+from onnxruntime_ep_style_bert_vits2_ggml.engine_integration import (
+    build_engine_execution_provider_config,
+)
+from onnxruntime_ep_style_bert_vits2_ggml.runtime import (
+    BuiltinProvider as BuiltinOnnxProvider,
+)
+from onnxruntime_ep_style_bert_vits2_ggml.runtime import (
+    PluginExecutionProviderConfig as OnnxPluginExecutionProviderConfig,
 )
 
 _DEFAULT_TEXTS = (
@@ -401,29 +407,21 @@ def _build_ggml_plugin_config(
     jp_bert_gguf_path: Path | None = None,
     inherit_global_jp_bert_gguf_path: bool = True,
 ) -> OnnxPluginExecutionProviderConfig:
-    if args.ggml_native_library_path is None:
-        raise RuntimeError("ONNX GGML backends require --ggml_native_library_path.")
-    provider_options = {
-        "backend": ggml_backend,
-        "claim_jp_bert_graph": "1",
-        "claim_synthesis_graph": "1",
-        "eager_load_model": "1",
-        "n_threads": "0",
-        "precision": args.ggml_vulkan_precision,
-        "vulkan_math_mode": args.ggml_vulkan_math_mode,
-        "tts_cpp_library_path": str(args.ggml_native_library_path),
-    }
-    if args.ggml_vulkan_device is not None:
-        provider_options["device"] = args.ggml_vulkan_device
+    base_options = {"vulkan_math_mode": args.ggml_vulkan_math_mode}
     configured_jp_bert_gguf_path = jp_bert_gguf_path
     if configured_jp_bert_gguf_path is None and inherit_global_jp_bert_gguf_path:
         configured_jp_bert_gguf_path = args.ggml_jp_bert_gguf_path
     if configured_jp_bert_gguf_path is not None:
-        provider_options["jp_bert_gguf_path"] = str(configured_jp_bert_gguf_path)
-    return OnnxPluginExecutionProviderConfig(
+        base_options["jp_bert_gguf_path"] = str(configured_jp_bert_gguf_path)
+    return build_engine_execution_provider_config(
+        base_options=base_options,
+        backend=ggml_backend,
+        precision=args.ggml_vulkan_precision,
+        tts_cpp_library_path=args.ggml_native_library_path,
+        vulkan_device=args.ggml_vulkan_device,
+        path_base_dir=_ENGINE_DIR,
+        library_path=args.onnx_ep_library_path,
         provider_name="StyleBertVits2GgmlExecutionProvider",
-        provider_options=provider_options,
-        library_path=_resolve_default_onnx_ep_library_path(args.onnx_ep_library_path),
         strict=True,
     )
 

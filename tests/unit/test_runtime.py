@@ -14,6 +14,7 @@ from onnxruntime_ep_style_bert_vits2_ggml.runtime import (
     configure_execution_provider,
     default_backend_for_platform,
     inference_session_scope,
+    select_builtin_execution_providers,
 )
 
 
@@ -72,6 +73,68 @@ def test_build_provider_options_requires_tts_cpp_library() -> None:
             precision="accurate",
             tts_cpp_library_path=None,
         )
+
+
+def test_select_builtin_execution_providers_can_force_directml() -> None:
+    providers = select_builtin_execution_providers(
+        use_gpu=True,
+        available_providers=["CPUExecutionProvider", "DmlExecutionProvider"],
+        preferred_provider="directml",
+    )
+
+    assert providers == [
+        ("DmlExecutionProvider", {"device_id": 0}),
+        ("CPUExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"}),
+    ]
+
+
+def test_select_builtin_execution_providers_can_force_cuda_without_directml_fallback() -> (
+    None
+):
+    providers = select_builtin_execution_providers(
+        use_gpu=True,
+        available_providers=[
+            "CPUExecutionProvider",
+            "CUDAExecutionProvider",
+            "DmlExecutionProvider",
+        ],
+        preferred_provider="cuda",
+    )
+
+    assert providers == [
+        (
+            "CUDAExecutionProvider",
+            {
+                "arena_extend_strategy": "kSameAsRequested",
+                "cudnn_conv_algo_search": "DEFAULT",
+            },
+        ),
+        ("CPUExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"}),
+    ]
+
+
+def test_select_builtin_execution_providers_keeps_auto_cuda_directml_fallback() -> None:
+    providers = select_builtin_execution_providers(
+        use_gpu=True,
+        available_providers=[
+            "CPUExecutionProvider",
+            "CUDAExecutionProvider",
+            "DmlExecutionProvider",
+        ],
+        preferred_provider=None,
+    )
+
+    assert providers == [
+        (
+            "CUDAExecutionProvider",
+            {
+                "arena_extend_strategy": "kSameAsRequested",
+                "cudnn_conv_algo_search": "DEFAULT",
+            },
+        ),
+        ("DmlExecutionProvider", {"device_id": 0}),
+        ("CPUExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"}),
+    ]
 
 
 def test_configure_execution_provider_registers_and_prepends_plugin(
