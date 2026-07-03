@@ -7,4 +7,4 @@ __pycache__/
 build/
 dist/
 download/
-src/onnxruntime_ep_aivis_ggml/lib/
+src/onnxruntime_ep_style_bert_vits2_ggml/lib/

@@ -1,0 +1,43 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "plugin-ep-release",
+      "displayName": "Plugin EP Release",
+      "description": "Build the Style-Bert-VITS2 GGML ONNX Runtime Plugin EP shared library.",
+      "binaryDir": "${sourceDir}/build/onnxruntime-ep-native",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "plugin-ep-release-msvc",
+      "displayName": "Plugin EP Release MSVC",
+      "description": "Build the Style-Bert-VITS2 GGML ONNX Runtime Plugin EP shared library with Visual Studio.",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/onnxruntime-ep-native",
+      "architecture": "x64",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "plugin-ep-release",
+      "configurePreset": "plugin-ep-release"
+    },
+    {
+      "name": "plugin-ep-release-msvc",
+      "configurePreset": "plugin-ep-release-msvc",
+      "configuration": "Release"
+    }
+  ]
+}

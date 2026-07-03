@@ -1,4 +1,4 @@
-"""ONNX initializer tensor pack extraction for the Aivis GGML Plugin EP."""
+"""ONNX initializer tensor pack extraction for the Style-Bert-VITS2 GGML Plugin EP."""
 
 from __future__ import annotations
 

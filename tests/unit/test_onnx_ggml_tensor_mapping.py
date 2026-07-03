@@ -7,19 +7,16 @@ from pathlib import Path
 
 import numpy as np
 
-_PLUGIN_SRC = (
-    Path(__file__).resolve().parents[2]
-    / "experimental"
-    / "onnxruntime-ep-aivis-ggml"
-    / "src"
-)
+_PLUGIN_SRC = Path(__file__).resolve().parents[2] / "src"
 sys.path.insert(0, str(_PLUGIN_SRC))
 
-from onnxruntime_ep_aivis_ggml.gguf_writer import (  # noqa: E402
+from onnxruntime_ep_style_bert_vits2_ggml.gguf_writer import (  # noqa: E402
     _store_as_f16,
     prepare_mapped_tensor_array,
 )
-from onnxruntime_ep_aivis_ggml.tts_cpp_mapping import map_initializer_name  # noqa: E402
+from onnxruntime_ep_style_bert_vits2_ggml.tts_cpp_mapping import (  # noqa: E402
+    map_initializer_name,
+)
 
 
 def test_sdp_flow_exp_initializer_maps_to_logs() -> None:

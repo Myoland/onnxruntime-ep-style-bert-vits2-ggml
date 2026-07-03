@@ -1,4 +1,4 @@
-"""Style-Bert-VITS2 ONNX graph signature helpers for the Aivis GGML Plugin EP."""
+"""Style-Bert-VITS2 ONNX graph signature helpers for the Style-Bert-VITS2 GGML Plugin EP."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any, cast
 
-SIGNATURE_CONTRACT_VERSION = "aivis-ggml-signature-contract-v1"
+SIGNATURE_CONTRACT_VERSION = "style-bert-vits2-ggml-signature-contract-v1"
 
 
 @dataclass(frozen=True)
@@ -48,7 +48,7 @@ class OnnxGraphSignature:
 
 @dataclass(frozen=True)
 class SignatureMatch:
-    """Result of checking whether a graph is safe for the Aivis GGML EP."""
+    """Result of checking whether a graph is safe for the Style-Bert-VITS2 GGML EP."""
 
     supported: bool
     reasons: tuple[str, ...]

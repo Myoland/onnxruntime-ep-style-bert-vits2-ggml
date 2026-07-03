@@ -1,4 +1,4 @@
-"""GGML artifact cache planning for the Aivis ONNX Runtime Plugin EP."""
+"""GGML artifact cache planning for the Style-Bert-VITS2 ONNX Runtime Plugin EP."""
 
 from __future__ import annotations
 
@@ -8,15 +8,15 @@ from hashlib import sha256
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
-from onnxruntime_ep_aivis_ggml.gguf_writer import (
+from onnxruntime_ep_style_bert_vits2_ggml.gguf_writer import (
     GgufWriteResult,
     write_tts_cpp_style_bert_vits2_gguf,
 )
-from onnxruntime_ep_aivis_ggml.initializer_pack import (
+from onnxruntime_ep_style_bert_vits2_ggml.initializer_pack import (
     InitializerTensorPack,
     write_initializer_tensor_pack,
 )
-from onnxruntime_ep_aivis_ggml.signature import (
+from onnxruntime_ep_style_bert_vits2_ggml.signature import (
     OnnxGraphSignature,
     SignatureMatch,
     build_signature_contract,
@@ -24,21 +24,23 @@ from onnxruntime_ep_aivis_ggml.signature import (
     match_supported_style_bert_vits2_synthesis,
     signature_structural_sha256,
 )
-from onnxruntime_ep_aivis_ggml.tts_cpp_mapping import (
+from onnxruntime_ep_style_bert_vits2_ggml.tts_cpp_mapping import (
     TensorMappingReport,
     build_graph_initializer_target_overrides,
     build_tts_cpp_mapping_report,
 )
 
-CACHE_MANIFEST_VERSION = "aivis-ggml-onnx-cache-v1"
-EP_CONTEXT_LITE_VERSION = "aivis-ggml-ep-context-lite-v1"
-OFFICIAL_EP_CONTEXT_VERSION = "aivis-ggml-official-ep-context-v1"
-RUNTIME_REGISTRY_CONTRACT = "aivis-ggml-runtime-registry-v1"
+CACHE_MANIFEST_VERSION = "style-bert-vits2-ggml-onnx-cache-v1"
+EP_CONTEXT_LITE_VERSION = "style-bert-vits2-ggml-ep-context-lite-v1"
+OFFICIAL_EP_CONTEXT_VERSION = "style-bert-vits2-ggml-official-ep-context-v1"
+RUNTIME_REGISTRY_CONTRACT = "style-bert-vits2-ggml-runtime-registry-v1"
 TTS_CPP_RUNTIME_CONTRACT = "tts-style-bert-vits2-c-api-v1"
-COMPATIBILITY_MATRIX_VERSION = "aivis-ggml-compatibility-matrix-v1"
-COMPILED_MODEL_COMPATIBILITY_VERSION = "aivis-ggml-compiled-model-compatibility-v1"
-SIGNATURE_CONTRACT_VERSION = "aivis-ggml-signature-contract-v1"
-PROVIDER_NAME = "AivisGgmlExecutionProvider"
+COMPATIBILITY_MATRIX_VERSION = "style-bert-vits2-ggml-compatibility-matrix-v1"
+COMPILED_MODEL_COMPATIBILITY_VERSION = (
+    "style-bert-vits2-ggml-compiled-model-compatibility-v1"
+)
+SIGNATURE_CONTRACT_VERSION = "style-bert-vits2-ggml-signature-contract-v1"
+PROVIDER_NAME = "StyleBertVits2GgmlExecutionProvider"
 PROVIDER_VERSION = "0.1.0"
 F16_CONVERTER_VERSION = "tts-cpp-style-bert-vits2-converter-f16-no-embed-norm-no-ups-v1"
 F32_CONVERTER_VERSION = "tts-cpp-style-bert-vits2-converter-f32-v1"
@@ -318,7 +320,7 @@ def build_cache_manifest(
         "compatibility_matrix": build_compatibility_matrix(),
         "ep_context": ep_context,
         "converter": {
-            "name": "onnxruntime-ep-aivis-ggml",
+            "name": "onnxruntime-ep-style-bert-vits2-ggml",
             "version": converter_version,
             "state": "written" if gguf_write_result is not None else "not_implemented",
             "readiness": converter_readiness,
@@ -545,7 +547,9 @@ def build_official_ep_context_payload(
     }
     errors = validate_official_ep_context_payload(payload, graph_kind=graph_kind)
     if errors:
-        raise ValueError("Invalid Aivis GGML EPContext payload: " + ", ".join(errors))
+        raise ValueError(
+            "Invalid Style-Bert-VITS2 GGML EPContext payload: " + ", ".join(errors)
+        )
     return payload
 
 
@@ -680,7 +684,10 @@ def validate_cache_manifest(
     if not isinstance(signature_contract, dict):
         errors.append("signature_contract_missing")
     else:
-        if signature_contract.get("version") != "aivis-ggml-signature-contract-v1":
+        if (
+            signature_contract.get("version")
+            != "style-bert-vits2-ggml-signature-contract-v1"
+        ):
             errors.append("signature_contract_version_mismatch")
         structural_sha256 = signature_contract.get("structural_sha256")
         if not isinstance(structural_sha256, str) or len(structural_sha256) != 64:

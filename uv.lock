@@ -881,7 +881,7 @@ wheels = [
 ]
 
 [[package]]
-name = "onnxruntime-ep-aivis-ggml"
+name = "onnxruntime-ep-style-bert-vits2-ggml"
 version = "0.1.0"
 source = { editable = "." }
 

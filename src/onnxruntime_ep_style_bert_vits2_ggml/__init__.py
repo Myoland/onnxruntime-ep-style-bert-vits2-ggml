@@ -1,14 +1,14 @@
-"""Discovery helpers for the Aivis ggml ONNX Runtime Plugin EP."""
+"""Discovery helpers for the Style-Bert-VITS2 ggml ONNX Runtime Plugin EP."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-_EP_NAME = "AivisGgmlExecutionProvider"
+_EP_NAME = "StyleBertVits2GgmlExecutionProvider"
 _LIBRARY_BASENAMES = (
-    "libaivis_ggml_onnx_ep.so",
-    "libaivis_ggml_onnx_ep.dylib",
-    "aivis_ggml_onnx_ep.dll",
+    "libstyle_bert_vits2_ggml_onnx_ep.so",
+    "libstyle_bert_vits2_ggml_onnx_ep.dylib",
+    "style_bert_vits2_ggml_onnx_ep.dll",
 )
 
 
@@ -50,6 +50,6 @@ def get_library_path() -> str:
         str(library_dir / basename) for basename in _LIBRARY_BASENAMES
     )
     raise FileNotFoundError(
-        "Aivis ggml ONNX Runtime Plugin EP library was not found. "
+        "Style-Bert-VITS2 ggml ONNX Runtime Plugin EP library was not found. "
         f"Expected one of: {candidates}"
     )

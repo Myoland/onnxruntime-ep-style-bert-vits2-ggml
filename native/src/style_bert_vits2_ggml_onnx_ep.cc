@@ -37,24 +37,24 @@
 #undef ORT_API_MANUAL_INIT
 
 #if defined(_WIN32)
-#define AIVIS_GGML_EP_EXPORT __declspec(dllexport)
+#define STYLE_BERT_VITS2_GGML_EP_EXPORT __declspec(dllexport)
 #elif defined(__GNUC__)
-#define AIVIS_GGML_EP_EXPORT __attribute__((visibility("default")))
+#define STYLE_BERT_VITS2_GGML_EP_EXPORT __attribute__((visibility("default")))
 #else
-#define AIVIS_GGML_EP_EXPORT
+#define STYLE_BERT_VITS2_GGML_EP_EXPORT
 #endif
 
 namespace {
 
-constexpr const char* kEpName = "AivisGgmlExecutionProvider";
-constexpr const char* kVendor = "Aivis Project";
+constexpr const char* kEpName = "StyleBertVits2GgmlExecutionProvider";
+constexpr const char* kVendor = "Style-Bert-VITS2 GGML";
 constexpr const char* kVersion = "0.1.0";
 constexpr const char* kStage = "synthesis-jp-bert-bridge";
-constexpr const char* kRuntimeRegistryContract = "aivis-ggml-runtime-registry-v1";
+constexpr const char* kRuntimeRegistryContract = "style-bert-vits2-ggml-runtime-registry-v1";
 constexpr const char* kTtsCppRuntimeContract = "tts-style-bert-vits2-c-api-v1";
-constexpr const char* kSignatureContract = "aivis-ggml-signature-contract-v1";
-constexpr const char* kOfficialEpContextVersion = "aivis-ggml-official-ep-context-v1";
-constexpr const char* kCompiledModelCompatibilityVersion = "aivis-ggml-compiled-model-compatibility-v1";
+constexpr const char* kSignatureContract = "style-bert-vits2-ggml-signature-contract-v1";
+constexpr const char* kOfficialEpContextVersion = "style-bert-vits2-ggml-official-ep-context-v1";
+constexpr const char* kCompiledModelCompatibilityVersion = "style-bert-vits2-ggml-compiled-model-compatibility-v1";
 constexpr uint32_t kExpectedTtsCppRuntimeAbiVersion = 1;
 constexpr uint32_t kExpectedTtsCppGgufSchemaVersion = 1;
 constexpr int64_t kExpectedIrVersion = 8;
@@ -172,13 +172,13 @@ void LogMessage(
 }
 
 bool IsTraceEnabled() {
-  const char* value = std::getenv("AIVIS_GGML_EP_TRACE");
+  const char* value = std::getenv("STYLE_BERT_VITS2_GGML_EP_TRACE");
   return value != nullptr && value[0] != '\0' && std::string(value) != "0";
 }
 
 void TraceMessage(const std::string& message) {
   if (IsTraceEnabled()) {
-    std::cerr << "AIVIS_GGML_EP_TRACE " << message << std::endl;
+    std::cerr << "STYLE_BERT_VITS2_GGML_EP_TRACE " << message << std::endl;
   }
 }
 
@@ -251,7 +251,7 @@ size_t BuildOutputIndex(const OrtGraph* ort_graph, const char* expected_output_n
   throw std::runtime_error(std::string("compiled graph output is missing: ") + expected_output_name);
 }
 
-struct AivisGgmlEpConfig {
+struct StyleBertVits2GgmlEpConfig {
   std::string backend = kDefaultBackend;
   std::string device;
   std::string precision = kDefaultPrecision;
@@ -350,8 +350,8 @@ int ResolveRuntimeThreadCount(int requested) {
   return detected > 0 ? static_cast<int>(detected) : 1;
 }
 
-AivisGgmlEpConfig ReadEpConfig(const OrtSessionOptions* session_options) {
-  AivisGgmlEpConfig config;
+StyleBertVits2GgmlEpConfig ReadEpConfig(const OrtSessionOptions* session_options) {
+  StyleBertVits2GgmlEpConfig config;
   config.backend = ReadEpOption(session_options, "backend", kDefaultBackend);
   config.device = ReadEpOption(session_options, "device", "");
   config.precision = ReadEpOption(session_options, "precision", kDefaultPrecision);
@@ -434,29 +434,29 @@ std::string ReadSmallTextFile(const std::string& path, size_t max_bytes) {
 }
 
 bool ManifestContainsReadyCache(const std::string& manifest_text) {
-  return manifest_text.find("aivis-ggml-onnx-cache-v1") != std::string::npos &&
+  return manifest_text.find("style-bert-vits2-ggml-onnx-cache-v1") != std::string::npos &&
          manifest_text.find("\"status\": \"ready\"") != std::string::npos &&
          manifest_text.find("\"can_write_gguf\": true") != std::string::npos;
 }
 
-OrtStatus* ValidateEpConfig(const OrtApi& api, const AivisGgmlEpConfig& config) noexcept {
+OrtStatus* ValidateEpConfig(const OrtApi& api, const StyleBertVits2GgmlEpConfig& config) noexcept {
   if (!IsSupportedBackend(config.backend)) {
     return CreateStatus(
         api,
         ORT_INVALID_ARGUMENT,
-        "AivisGgmlExecutionProvider option backend must be one of: vulkan, metal, cpu.");
+        "StyleBertVits2GgmlExecutionProvider option backend must be one of: vulkan, metal, cpu.");
   }
   if (!IsSupportedPrecision(config.precision)) {
     return CreateStatus(
         api,
         ORT_INVALID_ARGUMENT,
-        "AivisGgmlExecutionProvider option precision must be one of: accurate, fast.");
+        "StyleBertVits2GgmlExecutionProvider option precision must be one of: accurate, fast.");
   }
   if (!IsSupportedVulkanMathMode(config.vulkan_math_mode)) {
     return CreateStatus(
         api,
         ORT_INVALID_ARGUMENT,
-        "AivisGgmlExecutionProvider option vulkan_math_mode must be one of: f32, coopmat, fp16, fp16-coopmat.");
+        "StyleBertVits2GgmlExecutionProvider option vulkan_math_mode must be one of: f32, coopmat, fp16, fp16-coopmat.");
   }
   try {
     if (!config.cache_manifest_path.empty()) {
@@ -464,14 +464,14 @@ OrtStatus* ValidateEpConfig(const OrtApi& api, const AivisGgmlEpConfig& config) 
         return CreateStatus(
             api,
             ORT_INVALID_ARGUMENT,
-            "AivisGgmlExecutionProvider option cache_manifest_path does not exist.");
+            "StyleBertVits2GgmlExecutionProvider option cache_manifest_path does not exist.");
       }
       const std::string manifest = ReadSmallTextFile(config.cache_manifest_path, 1024 * 1024);
       if (!ManifestContainsReadyCache(manifest)) {
         return CreateStatus(
             api,
             ORT_INVALID_ARGUMENT,
-            "AivisGgmlExecutionProvider cache_manifest_path is not a ready Aivis GGML cache manifest.");
+            "StyleBertVits2GgmlExecutionProvider cache_manifest_path is not a ready Style-Bert-VITS2 GGML cache manifest.");
       }
     }
     if (config.eager_load_model) {
@@ -479,25 +479,25 @@ OrtStatus* ValidateEpConfig(const OrtApi& api, const AivisGgmlEpConfig& config) 
         return CreateStatus(
             api,
             ORT_INVALID_ARGUMENT,
-            "AivisGgmlExecutionProvider eager_load_model requires an existing tts_cpp_library_path.");
+            "StyleBertVits2GgmlExecutionProvider eager_load_model requires an existing tts_cpp_library_path.");
       }
       if (config.gguf_path.empty() && config.jp_bert_gguf_path.empty()) {
         return CreateStatus(
             api,
             ORT_INVALID_ARGUMENT,
-            "AivisGgmlExecutionProvider eager_load_model requires gguf_path or jp_bert_gguf_path.");
+            "StyleBertVits2GgmlExecutionProvider eager_load_model requires gguf_path or jp_bert_gguf_path.");
       }
       if (!config.gguf_path.empty() && !PathExists(config.gguf_path)) {
         return CreateStatus(
             api,
             ORT_INVALID_ARGUMENT,
-            "AivisGgmlExecutionProvider option gguf_path does not exist.");
+            "StyleBertVits2GgmlExecutionProvider option gguf_path does not exist.");
       }
       if (!config.jp_bert_gguf_path.empty() && !PathExists(config.jp_bert_gguf_path)) {
         return CreateStatus(
             api,
             ORT_INVALID_ARGUMENT,
-            "AivisGgmlExecutionProvider option jp_bert_gguf_path does not exist.");
+            "StyleBertVits2GgmlExecutionProvider option jp_bert_gguf_path does not exist.");
       }
     }
     if ((config.claim_synthesis_graph || config.claim_jp_bert_graph) &&
@@ -506,7 +506,7 @@ OrtStatus* ValidateEpConfig(const OrtApi& api, const AivisGgmlEpConfig& config) 
       return CreateStatus(
           api,
           ORT_INVALID_ARGUMENT,
-          "AivisGgmlExecutionProvider graph claim requires either eager_load_model=1 "
+          "StyleBertVits2GgmlExecutionProvider graph claim requires either eager_load_model=1 "
           "or tts_cpp_library_path for EPContext lazy restore.");
     }
     if ((config.claim_synthesis_graph || config.claim_jp_bert_graph) &&
@@ -515,19 +515,19 @@ OrtStatus* ValidateEpConfig(const OrtApi& api, const AivisGgmlEpConfig& config) 
       return CreateStatus(
           api,
           ORT_INVALID_ARGUMENT,
-          "AivisGgmlExecutionProvider graph claim requires an existing tts_cpp_library_path.");
+          "StyleBertVits2GgmlExecutionProvider graph claim requires an existing tts_cpp_library_path.");
     }
     if (config.claim_synthesis_graph && config.eager_load_model && config.gguf_path.empty()) {
       return CreateStatus(
           api,
           ORT_INVALID_ARGUMENT,
-          "AivisGgmlExecutionProvider claim_synthesis_graph with eager_load_model=1 requires gguf_path.");
+          "StyleBertVits2GgmlExecutionProvider claim_synthesis_graph with eager_load_model=1 requires gguf_path.");
     }
     if (config.claim_jp_bert_graph && config.eager_load_model && config.jp_bert_gguf_path.empty()) {
       return CreateStatus(
           api,
           ORT_INVALID_ARGUMENT,
-          "AivisGgmlExecutionProvider claim_jp_bert_graph with eager_load_model=1 requires jp_bert_gguf_path.");
+          "StyleBertVits2GgmlExecutionProvider claim_jp_bert_graph with eager_load_model=1 requires jp_bert_gguf_path.");
     }
   } catch (const std::exception& ex) {
     return CreateStatus(api, ORT_INVALID_ARGUMENT, ex.what());
@@ -535,7 +535,7 @@ OrtStatus* ValidateEpConfig(const OrtApi& api, const AivisGgmlEpConfig& config) 
   return nullptr;
 }
 
-std::string ConfigSummary(const AivisGgmlEpConfig& config) {
+std::string ConfigSummary(const StyleBertVits2GgmlEpConfig& config) {
   std::ostringstream out;
   out << "backend=" << config.backend
       << ", device=" << (config.device.empty() ? "default" : config.device)
@@ -902,7 +902,7 @@ class TtsCppRuntime final {
       size_t tokens,
       tts_style_bert_vits2_float_buffer* out_features);
 
-  static std::shared_ptr<TtsCppRuntime> LoadAndMaybeOpenModel(const AivisGgmlEpConfig& config) {
+  static std::shared_ptr<TtsCppRuntime> LoadAndMaybeOpenModel(const StyleBertVits2GgmlEpConfig& config) {
     auto library = DynamicLibrary::Load(config.tts_cpp_library_path);
     auto runtime = std::shared_ptr<TtsCppRuntime>(new TtsCppRuntime(std::move(library), config));
     runtime->last_error_ = reinterpret_cast<LastErrorFn>(
@@ -1053,7 +1053,7 @@ class TtsCppRuntime final {
   }
 
  private:
-  TtsCppRuntime(std::unique_ptr<DynamicLibrary> library, AivisGgmlEpConfig config)
+  TtsCppRuntime(std::unique_ptr<DynamicLibrary> library, StyleBertVits2GgmlEpConfig config)
       : library_(std::move(library)),
         config_(std::move(config)) {}
 
@@ -1130,7 +1130,7 @@ class TtsCppRuntime final {
   SynthesizeFrontFn synthesize_front_ = nullptr;
   SynthesizeFrontWithStyleVecFn synthesize_front_with_style_vec_ = nullptr;
   EncodeJpBertFeaturesFn encode_jp_bert_features_ = nullptr;
-  AivisGgmlEpConfig config_;
+  StyleBertVits2GgmlEpConfig config_;
   tts_style_bert_vits2_handle* model_handle_ = nullptr;
   tts_style_bert_vits2_jp_bert_handle* jp_bert_handle_ = nullptr;
   std::mutex mutex_;
@@ -1152,7 +1152,7 @@ std::string NormalizeRuntimeRegistryPath(const std::string& raw_path) {
   return normalized.lexically_normal().string();
 }
 
-std::string BuildRuntimeRegistryKey(const AivisGgmlEpConfig& config) {
+std::string BuildRuntimeRegistryKey(const StyleBertVits2GgmlEpConfig& config) {
   std::ostringstream out;
   out << kRuntimeRegistryContract
       << "\nbackend=" << config.backend
@@ -1169,7 +1169,7 @@ std::string BuildRuntimeRegistryKey(const AivisGgmlEpConfig& config) {
 class TtsCppRuntimeRegistry final {
  public:
   static std::shared_ptr<TtsCppRuntime> Acquire(
-      const AivisGgmlEpConfig& config,
+      const StyleBertVits2GgmlEpConfig& config,
       bool& reused) {
     reused = false;
     const std::string key = BuildRuntimeRegistryKey(config);
@@ -1201,16 +1201,16 @@ class TtsCppRuntimeRegistry final {
   }
 };
 
-enum class AivisGgmlGraphKind {
+enum class StyleBertVits2GgmlGraphKind {
   Synthesis,
   JpBert,
 };
 
-const char* GraphKindName(AivisGgmlGraphKind graph_kind) noexcept {
+const char* GraphKindName(StyleBertVits2GgmlGraphKind graph_kind) noexcept {
   switch (graph_kind) {
-    case AivisGgmlGraphKind::Synthesis:
+    case StyleBertVits2GgmlGraphKind::Synthesis:
       return "synthesis";
-    case AivisGgmlGraphKind::JpBert:
+    case StyleBertVits2GgmlGraphKind::JpBert:
       return "jp-bert";
   }
   return "unknown";
@@ -1265,11 +1265,11 @@ bool HasParentDirectoryTraversal(const std::filesystem::path& path) {
       });
 }
 
-std::filesystem::path EpContextModelDirectory(const AivisGgmlEpConfig& config) {
+std::filesystem::path EpContextModelDirectory(const StyleBertVits2GgmlEpConfig& config) {
   if (config.ort_ep_context_file_path.empty()) {
     if (!config.ort_ep_context_embed_mode) {
       throw std::runtime_error(
-          "AivisGgmlExecutionProvider ep.context_file_path is required when "
+          "StyleBertVits2GgmlExecutionProvider ep.context_file_path is required when "
           "ep.context_enable=1 and ep.context_embed_mode=0.");
     }
     return {};
@@ -1313,7 +1313,7 @@ std::string PortablePathForEpContext(
   if (error || relative_path.empty() || relative_path.is_absolute() ||
       HasParentDirectoryTraversal(relative_path)) {
     throw std::runtime_error(
-        std::string("AivisGgmlExecutionProvider ") + option_name +
+        std::string("StyleBertVits2GgmlExecutionProvider ") + option_name +
         " must be in the ep.context_file_path directory or one of its subdirectories "
         "when generating a portable EPContext model.");
   }
@@ -1321,8 +1321,8 @@ std::string PortablePathForEpContext(
 }
 
 std::string BuildEpContextPayload(
-    const AivisGgmlEpConfig& config,
-    AivisGgmlGraphKind graph_kind,
+    const StyleBertVits2GgmlEpConfig& config,
+    StyleBertVits2GgmlGraphKind graph_kind,
     const OrtGraph* ort_graph,
     size_t graph_index) {
   const std::filesystem::path context_model_directory = EpContextModelDirectory(config);
@@ -1366,8 +1366,8 @@ std::string BuildEpContextPayload(
 }
 
 std::string EpContextExternalFilename(
-    const AivisGgmlEpConfig& config,
-    AivisGgmlGraphKind graph_kind,
+    const StyleBertVits2GgmlEpConfig& config,
+    StyleBertVits2GgmlGraphKind graph_kind,
     size_t graph_index) {
   std::filesystem::path context_model_path(config.ort_ep_context_file_path);
   std::string stem = context_model_path.stem().string();
@@ -1375,14 +1375,14 @@ std::string EpContextExternalFilename(
     stem = "model_ctx";
   }
   std::ostringstream filename;
-  filename << stem << "_aivis_ggml_" << GraphKindName(graph_kind)
+  filename << stem << "_style_bert_vits2_ggml_" << GraphKindName(graph_kind)
            << "_" << graph_index << ".json";
   return filename.str();
 }
 
 std::string WriteEpContextPayloadFile(
-    const AivisGgmlEpConfig& config,
-    AivisGgmlGraphKind graph_kind,
+    const StyleBertVits2GgmlEpConfig& config,
+    StyleBertVits2GgmlGraphKind graph_kind,
     size_t graph_index,
     const std::string& payload) {
   const std::filesystem::path directory = EpContextModelDirectory(config);
@@ -1396,11 +1396,11 @@ std::string WriteEpContextPayloadFile(
   const std::filesystem::path output_path = directory / filename;
   std::ofstream file(output_path, std::ios::binary | std::ios::trunc);
   if (!file) {
-    throw std::runtime_error("could not create Aivis GGML EPContext payload file.");
+    throw std::runtime_error("could not create Style-Bert-VITS2 GGML EPContext payload file.");
   }
   file << payload;
   if (!file) {
-    throw std::runtime_error("could not write Aivis GGML EPContext payload file.");
+    throw std::runtime_error("could not write Style-Bert-VITS2 GGML EPContext payload file.");
   }
   return filename;
 }
@@ -1454,10 +1454,10 @@ void ReleaseOpAttrs(const OrtApi& api, std::vector<OrtOpAttr*>& attributes) noex
 
 OrtStatus* CreateEpContextNode(
     const OrtApi& api,
-    const AivisGgmlEpConfig& config,
+    const StyleBertVits2GgmlEpConfig& config,
     const OrtGraph* ort_graph,
     const OrtNode* fused_node,
-    AivisGgmlGraphKind graph_kind,
+    StyleBertVits2GgmlGraphKind graph_kind,
     size_t graph_index,
     OrtNode** ep_context_node) noexcept {
   if (ep_context_node == nullptr) {
@@ -1529,7 +1529,7 @@ OrtStatus* CreateEpContextNode(
     const std::string hardware_architecture =
         config.device.empty() ? config.backend : config.backend + ":" + config.device;
     const std::string ep_sdk_version =
-        std::string("onnxruntime-ep-aivis-ggml/") + kVersion;
+        std::string("onnxruntime-ep-style-bert-vits2-ggml/") + kVersion;
 
     std::vector<OrtOpAttr*> attributes;
     attributes.reserve(8);
@@ -1574,19 +1574,19 @@ OrtStatus* CreateEpContextNode(
     ReleaseOpAttrs(api, attributes);
     return status;
   } catch (const std::bad_alloc&) {
-    return CreateStatus(api, ORT_FAIL, "Out of memory creating Aivis GGML EPContext node.");
+    return CreateStatus(api, ORT_FAIL, "Out of memory creating Style-Bert-VITS2 GGML EPContext node.");
   } catch (const std::exception& ex) {
     return CreateStatus(api, ORT_FAIL, ex.what());
   } catch (...) {
-    return CreateStatus(api, ORT_FAIL, "Unknown error creating Aivis GGML EPContext node.");
+    return CreateStatus(api, ORT_FAIL, "Unknown error creating Style-Bert-VITS2 GGML EPContext node.");
   }
 }
 
-struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
-  AivisGgmlNodeComputeInfo(
+struct StyleBertVits2GgmlNodeComputeInfo final : OrtNodeComputeInfo {
+  StyleBertVits2GgmlNodeComputeInfo(
       const OrtApi& ort_api,
       std::shared_ptr<TtsCppRuntime> runtime,
-      AivisGgmlGraphKind graph_kind,
+      StyleBertVits2GgmlGraphKind graph_kind,
       std::vector<size_t> input_indices,
       size_t primary_output_index)
       : OrtNodeComputeInfo{},
@@ -1605,9 +1605,9 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
       OrtNodeComputeInfo* this_ptr,
       OrtNodeComputeContext* compute_context,
       void** compute_state) noexcept {
-    auto* info = static_cast<AivisGgmlNodeComputeInfo*>(this_ptr);
+    auto* info = static_cast<StyleBertVits2GgmlNodeComputeInfo*>(this_ptr);
     if (compute_state == nullptr) {
-      return CreateStatus(info->ort_api_, ORT_INVALID_ARGUMENT, "Aivis GGML compute state output is null.");
+      return CreateStatus(info->ort_api_, ORT_INVALID_ARGUMENT, "Style-Bert-VITS2 GGML compute state output is null.");
     }
 
     *compute_state = nullptr;
@@ -1621,11 +1621,11 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
       *compute_state = state.release();
       return nullptr;
     } catch (const std::bad_alloc&) {
-      return CreateStatus(info->ort_api_, ORT_FAIL, "Out of memory creating Aivis GGML compute state.");
+      return CreateStatus(info->ort_api_, ORT_FAIL, "Out of memory creating Style-Bert-VITS2 GGML compute state.");
     } catch (const std::exception& ex) {
       return CreateStatus(info->ort_api_, ORT_FAIL, ex.what());
     } catch (...) {
-      return CreateStatus(info->ort_api_, ORT_FAIL, "Unknown error creating Aivis GGML compute state.");
+      return CreateStatus(info->ort_api_, ORT_FAIL, "Unknown error creating Style-Bert-VITS2 GGML compute state.");
     }
   }
 
@@ -1633,17 +1633,17 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
       OrtNodeComputeInfo* this_ptr,
       void* compute_state,
       OrtKernelContext* kernel_context) noexcept {
-    auto* info = static_cast<AivisGgmlNodeComputeInfo*>(this_ptr);
+    auto* info = static_cast<StyleBertVits2GgmlNodeComputeInfo*>(this_ptr);
     if (kernel_context == nullptr) {
-      return CreateStatus(info->ort_api_, ORT_INVALID_ARGUMENT, "Aivis GGML Compute received a null kernel context.");
+      return CreateStatus(info->ort_api_, ORT_INVALID_ARGUMENT, "Style-Bert-VITS2 GGML Compute received a null kernel context.");
     }
     if (info->runtime_ == nullptr) {
       return CreateStatus(
           info->ort_api_,
           ORT_NOT_IMPLEMENTED,
-          "Aivis GGML Compute requires an eager-loaded TTS.cpp runtime.");
+          "Style-Bert-VITS2 GGML Compute requires an eager-loaded TTS.cpp runtime.");
     }
-    if (info->graph_kind_ == AivisGgmlGraphKind::JpBert) {
+    if (info->graph_kind_ == StyleBertVits2GgmlGraphKind::JpBert) {
       return ComputeJpBertImpl(info, compute_state, kernel_context);
     }
 
@@ -1653,17 +1653,17 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
       const size_t output_count = context.GetOutputCount();
       if (input_count != kExpectedInputNames.size()) {
         std::ostringstream message;
-        message << "Aivis GGML Compute expected " << kExpectedInputNames.size()
+        message << "Style-Bert-VITS2 GGML Compute expected " << kExpectedInputNames.size()
                 << " inputs, got " << input_count << ".";
         const std::string error_message = message.str();
         return CreateStatus(info->ort_api_, ORT_INVALID_ARGUMENT, error_message.c_str());
       }
       if (output_count == 0) {
-        return CreateStatus(info->ort_api_, ORT_INVALID_ARGUMENT, "Aivis GGML Compute expected at least one output.");
+        return CreateStatus(info->ort_api_, ORT_INVALID_ARGUMENT, "Style-Bert-VITS2 GGML Compute expected at least one output.");
       }
 
       if (info->input_indices_.size() != kExpectedInputNames.size()) {
-        return CreateStatus(info->ort_api_, ORT_FAIL, "Aivis GGML synthesis input index map is invalid.");
+        return CreateStatus(info->ort_api_, ORT_FAIL, "Style-Bert-VITS2 GGML synthesis input index map is invalid.");
       }
       Ort::ConstValue x_tst = context.GetInput(info->input_indices_[0]);
       const size_t tokens = ExpectTokenMatrix(x_tst, ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64, "x_tst");
@@ -1718,7 +1718,7 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
       const std::vector<int64_t> output_shape = {1, 1, static_cast<int64_t>(audio.length)};
       Ort::UnownedValue output = context.GetOutput(info->primary_output_index_, output_shape);
       if (output == nullptr) {
-        return CreateStatus(info->ort_api_, ORT_FAIL, "Aivis GGML Compute could not allocate output tensor.");
+        return CreateStatus(info->ort_api_, ORT_FAIL, "Style-Bert-VITS2 GGML Compute could not allocate output tensor.");
       }
       float* output_data = output.GetTensorMutableData<float>();
       if (audio.length > 0) {
@@ -1750,23 +1750,23 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
     } catch (const Ort::Exception& ex) {
       return CreateStatus(info->ort_api_, ORT_FAIL, ex.what());
     } catch (const std::bad_alloc&) {
-      return CreateStatus(info->ort_api_, ORT_FAIL, "Out of memory during Aivis GGML Compute.");
+      return CreateStatus(info->ort_api_, ORT_FAIL, "Out of memory during Style-Bert-VITS2 GGML Compute.");
     } catch (const std::exception& ex) {
       return CreateStatus(info->ort_api_, ORT_FAIL, ex.what());
     } catch (...) {
-      return CreateStatus(info->ort_api_, ORT_FAIL, "Unknown error during Aivis GGML Compute.");
+      return CreateStatus(info->ort_api_, ORT_FAIL, "Unknown error during Style-Bert-VITS2 GGML Compute.");
     }
   }
 
   static OrtStatus* ComputeJpBertImpl(
-      AivisGgmlNodeComputeInfo* info,
+      StyleBertVits2GgmlNodeComputeInfo* info,
       void* compute_state,
       OrtKernelContext* kernel_context) noexcept {
     if (!info->runtime_->HasJpBertModel()) {
       return CreateStatus(
           info->ort_api_,
           ORT_NOT_IMPLEMENTED,
-          "Aivis GGML JP-BERT Compute requires an eager-loaded TTS.cpp JP-BERT runtime.");
+          "Style-Bert-VITS2 GGML JP-BERT Compute requires an eager-loaded TTS.cpp JP-BERT runtime.");
     }
 
     try {
@@ -1775,21 +1775,21 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
       const size_t output_count = context.GetOutputCount();
       if (input_count != kExpectedJpBertInputCount) {
         std::ostringstream message;
-        message << "Aivis GGML JP-BERT Compute expected " << kExpectedJpBertInputCount
+        message << "Style-Bert-VITS2 GGML JP-BERT Compute expected " << kExpectedJpBertInputCount
                 << " inputs, got " << input_count << ".";
         const std::string error_message = message.str();
         return CreateStatus(info->ort_api_, ORT_INVALID_ARGUMENT, error_message.c_str());
       }
       if (output_count != kExpectedJpBertOutputCount) {
         std::ostringstream message;
-        message << "Aivis GGML JP-BERT Compute expected " << kExpectedJpBertOutputCount
+        message << "Style-Bert-VITS2 GGML JP-BERT Compute expected " << kExpectedJpBertOutputCount
                 << " output, got " << output_count << ".";
         const std::string error_message = message.str();
         return CreateStatus(info->ort_api_, ORT_INVALID_ARGUMENT, error_message.c_str());
       }
 
       if (info->input_indices_.size() != kExpectedJpBertInputNames.size()) {
-        return CreateStatus(info->ort_api_, ORT_FAIL, "Aivis GGML JP-BERT input index map is invalid.");
+        return CreateStatus(info->ort_api_, ORT_FAIL, "Style-Bert-VITS2 GGML JP-BERT input index map is invalid.");
       }
       Ort::ConstValue input_ids_value = context.GetInput(info->input_indices_[0]);
       const size_t tokens = ExpectTokenMatrix(input_ids_value, ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64, "input_ids");
@@ -1830,7 +1830,7 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
       };
       Ort::UnownedValue output = context.GetOutput(info->primary_output_index_, output_shape);
       if (output == nullptr) {
-        return CreateStatus(info->ort_api_, ORT_FAIL, "Aivis GGML JP-BERT Compute could not allocate output tensor.");
+        return CreateStatus(info->ort_api_, ORT_FAIL, "Style-Bert-VITS2 GGML JP-BERT Compute could not allocate output tensor.");
       }
       float* output_data = output.GetTensorMutableData<float>();
       if (features.data == nullptr) {
@@ -1849,11 +1849,11 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
     } catch (const Ort::Exception& ex) {
       return CreateStatus(info->ort_api_, ORT_FAIL, ex.what());
     } catch (const std::bad_alloc&) {
-      return CreateStatus(info->ort_api_, ORT_FAIL, "Out of memory during Aivis GGML JP-BERT Compute.");
+      return CreateStatus(info->ort_api_, ORT_FAIL, "Out of memory during Style-Bert-VITS2 GGML JP-BERT Compute.");
     } catch (const std::exception& ex) {
       return CreateStatus(info->ort_api_, ORT_FAIL, ex.what());
     } catch (...) {
-      return CreateStatus(info->ort_api_, ORT_FAIL, "Unknown error during Aivis GGML JP-BERT Compute.");
+      return CreateStatus(info->ort_api_, ORT_FAIL, "Unknown error during Style-Bert-VITS2 GGML JP-BERT Compute.");
     }
   }
 
@@ -1865,7 +1865,7 @@ struct AivisGgmlNodeComputeInfo final : OrtNodeComputeInfo {
 
   const OrtApi& ort_api_;
   std::shared_ptr<TtsCppRuntime> runtime_;
-  AivisGgmlGraphKind graph_kind_;
+  StyleBertVits2GgmlGraphKind graph_kind_;
   std::vector<size_t> input_indices_;
   size_t primary_output_index_;
 };
@@ -1882,7 +1882,7 @@ struct GraphSignatureGateResult {
 
 struct EpContextGateResult {
   bool supported = false;
-  AivisGgmlGraphKind graph_kind = AivisGgmlGraphKind::Synthesis;
+  StyleBertVits2GgmlGraphKind graph_kind = StyleBertVits2GgmlGraphKind::Synthesis;
   std::vector<std::string> reasons;
 
   void Reject(std::string reason) {
@@ -1890,7 +1890,7 @@ struct EpContextGateResult {
     reasons.push_back(std::move(reason));
   }
 
-  void Accept(AivisGgmlGraphKind accepted_graph_kind) {
+  void Accept(StyleBertVits2GgmlGraphKind accepted_graph_kind) {
     supported = true;
     graph_kind = accepted_graph_kind;
     reasons.clear();
@@ -2216,7 +2216,7 @@ std::string JsonUnescape(const std::string& value) {
         output.push_back('\t');
         break;
       default:
-        throw std::runtime_error("unsupported JSON escape sequence in Aivis GGML EPContext payload.");
+        throw std::runtime_error("unsupported JSON escape sequence in Style-Bert-VITS2 GGML EPContext payload.");
     }
   }
   return output;
@@ -2252,7 +2252,7 @@ bool ExtractJsonStringField(
     }
     raw_value.push_back(c);
   }
-  throw std::runtime_error("unterminated JSON string in Aivis GGML EPContext payload.");
+  throw std::runtime_error("unterminated JSON string in Style-Bert-VITS2 GGML EPContext payload.");
 }
 
 bool ExtractJsonIntField(
@@ -2282,7 +2282,7 @@ bool ExtractJsonIntField(
 }
 
 std::filesystem::path EpContextInferenceBaseDirectory(
-    const AivisGgmlEpConfig& config,
+    const StyleBertVits2GgmlEpConfig& config,
     const OrtGraph* ort_graph) {
   if (!config.ort_ep_context_file_path.empty()) {
     return EpContextModelDirectory(config);
@@ -2295,7 +2295,7 @@ std::filesystem::path EpContextInferenceBaseDirectory(
     return parent_path;
   }
   throw std::runtime_error(
-      "AivisGgmlExecutionProvider needs ep.context_file_path to resolve "
+      "StyleBertVits2GgmlExecutionProvider needs ep.context_file_path to resolve "
       "external EPContext payloads or relative GGUF artifacts when the model "
       "is loaded from memory.");
 }
@@ -2310,7 +2310,7 @@ std::string ResolveEpContextArtifactPath(
   const std::filesystem::path path(relative_path);
   if (path.is_absolute() || HasParentDirectoryTraversal(path)) {
     throw std::runtime_error(
-        std::string("Aivis GGML EPContext artifact path is not portable: ") +
+        std::string("Style-Bert-VITS2 GGML EPContext artifact path is not portable: ") +
         artifact_name);
   }
   std::error_code error;
@@ -2323,7 +2323,7 @@ std::string ResolveEpContextArtifactPath(
 }
 
 std::string ReadEpContextPayloadText(
-    const AivisGgmlEpConfig& config,
+    const StyleBertVits2GgmlEpConfig& config,
     const OrtGraph* ort_graph,
     const Ort::ConstNode& node) {
   std::string ep_cache_context;
@@ -2351,7 +2351,7 @@ std::string ReadEpContextPayloadText(
 }
 
 struct EpContextPayload {
-  AivisGgmlGraphKind graph_kind = AivisGgmlGraphKind::Synthesis;
+  StyleBertVits2GgmlGraphKind graph_kind = StyleBertVits2GgmlGraphKind::Synthesis;
   std::string backend;
   std::string device;
   std::string precision;
@@ -2363,10 +2363,10 @@ struct EpContextPayload {
 };
 
 EpContextPayload ParseEpContextPayload(
-    const AivisGgmlEpConfig& config,
+    const StyleBertVits2GgmlEpConfig& config,
     const OrtGraph* ort_graph,
     const Ort::ConstNode& node,
-    AivisGgmlGraphKind expected_graph_kind) {
+    StyleBertVits2GgmlGraphKind expected_graph_kind) {
   const std::string payload = ReadEpContextPayloadText(config, ort_graph, node);
   std::string value;
   if (!ExtractJsonStringField(payload, "version", value) ||
@@ -2393,9 +2393,9 @@ EpContextPayload ParseEpContextPayload(
 
   EpContextPayload parsed;
   if (value == "synthesis") {
-    parsed.graph_kind = AivisGgmlGraphKind::Synthesis;
+    parsed.graph_kind = StyleBertVits2GgmlGraphKind::Synthesis;
   } else if (value == "jp-bert") {
-    parsed.graph_kind = AivisGgmlGraphKind::JpBert;
+    parsed.graph_kind = StyleBertVits2GgmlGraphKind::JpBert;
   } else {
     throw std::runtime_error("EPContext payload graph_kind is unsupported.");
   }
@@ -2425,10 +2425,10 @@ EpContextPayload ParseEpContextPayload(
   return parsed;
 }
 
-AivisGgmlEpConfig BuildConfigFromEpContextPayload(
-    const AivisGgmlEpConfig& base_config,
+StyleBertVits2GgmlEpConfig BuildConfigFromEpContextPayload(
+    const StyleBertVits2GgmlEpConfig& base_config,
     const OrtGraph* ort_graph,
-    AivisGgmlGraphKind graph_kind) {
+    StyleBertVits2GgmlGraphKind graph_kind) {
   Ort::ConstGraph graph{ort_graph};
   const std::vector<Ort::ConstNode> nodes = graph.GetNodes();
   if (nodes.size() != 1) {
@@ -2437,7 +2437,7 @@ AivisGgmlEpConfig BuildConfigFromEpContextPayload(
 
   const EpContextPayload payload =
       ParseEpContextPayload(base_config, ort_graph, nodes[0], graph_kind);
-  AivisGgmlEpConfig runtime_config = base_config;
+  StyleBertVits2GgmlEpConfig runtime_config = base_config;
   runtime_config.eager_load_model = true;
   if (!payload.backend.empty()) {
     runtime_config.backend = payload.backend;
@@ -2468,10 +2468,10 @@ AivisGgmlEpConfig BuildConfigFromEpContextPayload(
         "EPContext lazy restore requires tts_cpp_library_path because the "
         "portable context payload does not store deployment-specific shared library paths.");
   }
-  if (graph_kind == AivisGgmlGraphKind::Synthesis && runtime_config.gguf_path.empty()) {
+  if (graph_kind == StyleBertVits2GgmlGraphKind::Synthesis && runtime_config.gguf_path.empty()) {
     throw std::runtime_error("EPContext lazy restore could not resolve gguf_path.");
   }
-  if (graph_kind == AivisGgmlGraphKind::JpBert && runtime_config.jp_bert_gguf_path.empty()) {
+  if (graph_kind == StyleBertVits2GgmlGraphKind::JpBert && runtime_config.jp_bert_gguf_path.empty()) {
     throw std::runtime_error("EPContext lazy restore could not resolve jp_bert_gguf_path.");
   }
   if (!PathExists(runtime_config.tts_cpp_library_path)) {
@@ -2488,9 +2488,9 @@ AivisGgmlEpConfig BuildConfigFromEpContextPayload(
 }
 
 bool CanLazyRestoreEpContextRuntime(
-    const AivisGgmlEpConfig& config,
+    const StyleBertVits2GgmlEpConfig& config,
     const OrtGraph* ort_graph,
-    AivisGgmlGraphKind graph_kind,
+    StyleBertVits2GgmlGraphKind graph_kind,
     std::string& reason) {
   try {
     (void)BuildConfigFromEpContextPayload(config, ort_graph, graph_kind);
@@ -2501,7 +2501,7 @@ bool CanLazyRestoreEpContextRuntime(
   }
 }
 
-EpContextGateResult MatchAivisGgmlEpContextGraph(const OrtGraph* ort_graph) {
+EpContextGateResult MatchStyleBertVits2GgmlEpContextGraph(const OrtGraph* ort_graph) {
   EpContextGateResult result;
   Ort::ConstGraph graph{ort_graph};
   const std::vector<Ort::ConstNode> nodes = graph.GetNodes();
@@ -2556,7 +2556,7 @@ EpContextGateResult MatchAivisGgmlEpContextGraph(const OrtGraph* ort_graph) {
       result.Reject(reason.str());
       return result;
     }
-    result.Accept(AivisGgmlGraphKind::Synthesis);
+    result.Accept(StyleBertVits2GgmlGraphKind::Synthesis);
     return result;
   }
 
@@ -2575,7 +2575,7 @@ EpContextGateResult MatchAivisGgmlEpContextGraph(const OrtGraph* ort_graph) {
       result.Reject(reason.str());
       return result;
     }
-    result.Accept(AivisGgmlGraphKind::JpBert);
+    result.Accept(StyleBertVits2GgmlGraphKind::JpBert);
     return result;
   }
 
@@ -2590,7 +2590,7 @@ std::string DetectCompiledModelGraphKind(const OrtGraph* ort_graph) {
     return "unsupported";
   }
 
-  const EpContextGateResult ep_context_gate = MatchAivisGgmlEpContextGraph(ort_graph);
+  const EpContextGateResult ep_context_gate = MatchStyleBertVits2GgmlEpContextGraph(ort_graph);
   if (ep_context_gate.supported) {
     return GraphKindName(ep_context_gate.graph_kind);
   }
@@ -2598,20 +2598,20 @@ std::string DetectCompiledModelGraphKind(const OrtGraph* ort_graph) {
   const GraphSignatureGateResult synthesis_gate =
       MatchStyleBertVits2SynthesisGraph(ort_graph);
   if (synthesis_gate.supported) {
-    return GraphKindName(AivisGgmlGraphKind::Synthesis);
+    return GraphKindName(StyleBertVits2GgmlGraphKind::Synthesis);
   }
 
   const GraphSignatureGateResult jp_bert_gate =
       MatchStyleBertVits2JpBertGraph(ort_graph);
   if (jp_bert_gate.supported) {
-    return GraphKindName(AivisGgmlGraphKind::JpBert);
+    return GraphKindName(StyleBertVits2GgmlGraphKind::JpBert);
   }
 
   return "unsupported";
 }
 
 std::string BuildCompiledModelCompatibilityInfo(
-    const AivisGgmlEpConfig& config,
+    const StyleBertVits2GgmlEpConfig& config,
     const OrtGraph* ort_graph) {
   std::ostringstream out;
   out << "{";
@@ -2644,7 +2644,7 @@ bool ExtractExpectedJsonStringField(
   return ExtractJsonStringField(payload, key, value) && value == expected_value;
 }
 
-OrtCompiledModelCompatibility ValidateAivisCompiledModelCompatibilityInfo(
+OrtCompiledModelCompatibility ValidateStyleBertVits2CompiledModelCompatibilityInfo(
     const char* compatibility_info) noexcept {
   if (compatibility_info == nullptr || compatibility_info[0] == '\0') {
     return OrtCompiledModelCompatibility_EP_NOT_APPLICABLE;
@@ -2710,8 +2710,8 @@ OrtCompiledModelCompatibility ValidateAivisCompiledModelCompatibilityInfo(
     }
 
     if (!ExtractJsonStringField(payload, "graph_kind", value) ||
-        (value != GraphKindName(AivisGgmlGraphKind::Synthesis) &&
-         value != GraphKindName(AivisGgmlGraphKind::JpBert))) {
+        (value != GraphKindName(StyleBertVits2GgmlGraphKind::Synthesis) &&
+         value != GraphKindName(StyleBertVits2GgmlGraphKind::JpBert))) {
       return OrtCompiledModelCompatibility_EP_UNSUPPORTED;
     }
 
@@ -2736,12 +2736,12 @@ OrtCompiledModelCompatibility ValidateAivisCompiledModelCompatibilityInfo(
   }
 }
 
-struct AivisGgmlEp final : OrtEp {
-  AivisGgmlEp(
+struct StyleBertVits2GgmlEp final : OrtEp {
+  StyleBertVits2GgmlEp(
       const OrtApi& ort_api,
       const OrtEpApi& ep_api,
       const OrtLogger* logger,
-      AivisGgmlEpConfig config,
+      StyleBertVits2GgmlEpConfig config,
       std::shared_ptr<TtsCppRuntime> runtime)
       : OrtEp{},
         ort_api_{ort_api},
@@ -2765,26 +2765,26 @@ struct AivisGgmlEp final : OrtEp {
       OrtEp* this_ptr,
       const OrtGraph* graph,
       OrtEpGraphSupportInfo* graph_support_info) noexcept {
-    auto* ep = static_cast<AivisGgmlEp*>(this_ptr);
+    auto* ep = static_cast<StyleBertVits2GgmlEp*>(this_ptr);
     if (graph == nullptr) {
       LogMessage(
           ep->ort_api_,
           ep->logger_,
           ORT_LOGGING_LEVEL_WARNING,
-          "AivisGgmlExecutionProvider received a null graph and claimed no nodes.");
+          "StyleBertVits2GgmlExecutionProvider received a null graph and claimed no nodes.");
       return nullptr;
     }
 
     try {
-      const EpContextGateResult ep_context_gate = MatchAivisGgmlEpContextGraph(graph);
+      const EpContextGateResult ep_context_gate = MatchStyleBertVits2GgmlEpContextGraph(graph);
       if (ep_context_gate.supported) {
         const bool wants_graph =
-            ep_context_gate.graph_kind == AivisGgmlGraphKind::Synthesis
+            ep_context_gate.graph_kind == StyleBertVits2GgmlGraphKind::Synthesis
                 ? ep->config_.claim_synthesis_graph
                 : ep->config_.claim_jp_bert_graph;
         const bool has_runtime =
             ep->runtime_ != nullptr &&
-            (ep_context_gate.graph_kind == AivisGgmlGraphKind::Synthesis
+            (ep_context_gate.graph_kind == StyleBertVits2GgmlGraphKind::Synthesis
                  ? ep->runtime_->HasSynthesisModel()
                  : ep->runtime_->HasJpBertModel());
         std::string lazy_restore_reason;
@@ -2800,7 +2800,7 @@ struct AivisGgmlEp final : OrtEp {
             return CreateStatus(
                 ep->ort_api_,
                 ORT_INVALID_ARGUMENT,
-                "AivisGgmlExecutionProvider graph_support_info is null.");
+                "StyleBertVits2GgmlExecutionProvider graph_support_info is null.");
           }
           const std::vector<Ort::ConstNode> nodes = Ort::ConstGraph{graph}.GetNodes();
           std::vector<const OrtNode*> raw_nodes;
@@ -2821,13 +2821,13 @@ struct AivisGgmlEp final : OrtEp {
             return status;
           }
           TraceMessage(
-              std::string("claimed Aivis GGML EPContext graph_kind=") +
+              std::string("claimed Style-Bert-VITS2 GGML EPContext graph_kind=") +
               GraphKindName(ep_context_gate.graph_kind));
           LogMessage(
               ep->ort_api_,
               ep->logger_,
               ORT_LOGGING_LEVEL_INFO,
-              std::string("AivisGgmlExecutionProvider claimed an EPContext graph. graph_kind=") +
+              std::string("StyleBertVits2GgmlExecutionProvider claimed an EPContext graph. graph_kind=") +
                   GraphKindName(ep_context_gate.graph_kind) +
                   ", runtime_ready=" + (has_runtime ? "true" : "false") +
                   ", lazy_restore=" + (can_lazy_restore ? "true" : "false") + ", " +
@@ -2838,7 +2838,7 @@ struct AivisGgmlEp final : OrtEp {
             ep->ort_api_,
             ep->logger_,
             ORT_LOGGING_LEVEL_INFO,
-            std::string("AivisGgmlExecutionProvider matched an EPContext graph, ")
+            std::string("StyleBertVits2GgmlExecutionProvider matched an EPContext graph, ")
                 + "but graph claiming or runtime readiness is disabled. graph_kind=" +
                 GraphKindName(ep_context_gate.graph_kind) + ", " +
                 "lazy_restore_reason=" + lazy_restore_reason + ", " +
@@ -2856,7 +2856,7 @@ struct AivisGgmlEp final : OrtEp {
                 ep->ort_api_,
                 ep->logger_,
                 ORT_LOGGING_LEVEL_WARNING,
-                "AivisGgmlExecutionProvider matched the Style-Bert-VITS2 synthesis graph, "
+                "StyleBertVits2GgmlExecutionProvider matched the Style-Bert-VITS2 synthesis graph, "
                 "but claim_synthesis_graph was ignored because TTS.cpp runtime is not loaded.");
             return nullptr;
           }
@@ -2864,7 +2864,7 @@ struct AivisGgmlEp final : OrtEp {
             return CreateStatus(
                 ep->ort_api_,
                 ORT_INVALID_ARGUMENT,
-                "AivisGgmlExecutionProvider graph_support_info is null.");
+                "StyleBertVits2GgmlExecutionProvider graph_support_info is null.");
           }
 
           const std::vector<Ort::ConstNode> nodes = Ort::ConstGraph{graph}.GetNodes();
@@ -2890,7 +2890,7 @@ struct AivisGgmlEp final : OrtEp {
               ep->ort_api_,
               ep->logger_,
               ORT_LOGGING_LEVEL_INFO,
-              "AivisGgmlExecutionProvider claimed the Style-Bert-VITS2 synthesis graph. " +
+              "StyleBertVits2GgmlExecutionProvider claimed the Style-Bert-VITS2 synthesis graph. " +
                   runtime_state + ConfigSummary(ep->config_));
           return nullptr;
         }
@@ -2898,7 +2898,7 @@ struct AivisGgmlEp final : OrtEp {
             ep->ort_api_,
             ep->logger_,
             ORT_LOGGING_LEVEL_INFO,
-            "AivisGgmlExecutionProvider matched the Style-Bert-VITS2 synthesis graph, "
+            "StyleBertVits2GgmlExecutionProvider matched the Style-Bert-VITS2 synthesis graph, "
             "but graph claiming is disabled until compile/compute is implemented. " +
                 runtime_state +
                 ConfigSummary(ep->config_));
@@ -2915,7 +2915,7 @@ struct AivisGgmlEp final : OrtEp {
                   ep->ort_api_,
                   ep->logger_,
                   ORT_LOGGING_LEVEL_WARNING,
-                  "AivisGgmlExecutionProvider matched the Style-Bert-VITS2 JP-BERT graph, "
+                  "StyleBertVits2GgmlExecutionProvider matched the Style-Bert-VITS2 JP-BERT graph, "
                   "but claim_jp_bert_graph was ignored because TTS.cpp JP-BERT runtime is not loaded.");
               return nullptr;
             }
@@ -2923,7 +2923,7 @@ struct AivisGgmlEp final : OrtEp {
               return CreateStatus(
                   ep->ort_api_,
                   ORT_INVALID_ARGUMENT,
-                  "AivisGgmlExecutionProvider graph_support_info is null.");
+                  "StyleBertVits2GgmlExecutionProvider graph_support_info is null.");
             }
 
             const std::vector<Ort::ConstNode> nodes = Ort::ConstGraph{graph}.GetNodes();
@@ -2949,7 +2949,7 @@ struct AivisGgmlEp final : OrtEp {
                 ep->ort_api_,
                 ep->logger_,
                 ORT_LOGGING_LEVEL_INFO,
-                "AivisGgmlExecutionProvider claimed the Style-Bert-VITS2 JP-BERT graph. " +
+                "StyleBertVits2GgmlExecutionProvider claimed the Style-Bert-VITS2 JP-BERT graph. " +
                     runtime_state + ConfigSummary(ep->config_));
             return nullptr;
           }
@@ -2957,7 +2957,7 @@ struct AivisGgmlEp final : OrtEp {
               ep->ort_api_,
               ep->logger_,
               ORT_LOGGING_LEVEL_INFO,
-              "AivisGgmlExecutionProvider matched the Style-Bert-VITS2 JP-BERT graph, "
+              "StyleBertVits2GgmlExecutionProvider matched the Style-Bert-VITS2 JP-BERT graph, "
               "but claim_jp_bert_graph is disabled. " +
                   runtime_state +
                   ConfigSummary(ep->config_));
@@ -2971,7 +2971,7 @@ struct AivisGgmlEp final : OrtEp {
             ep->ort_api_,
             ep->logger_,
             ORT_LOGGING_LEVEL_VERBOSE,
-            "AivisGgmlExecutionProvider rejected graph signatures and claimed no nodes: "
+            "StyleBertVits2GgmlExecutionProvider rejected graph signatures and claimed no nodes: "
             "synthesis={" + JoinReasons(gate.reasons) + "}; jp-bert={" +
                 JoinReasons(jp_bert_gate.reasons) + "}; ep-context={" +
                 JoinReasons(ep_context_gate.reasons) + "}");
@@ -2981,19 +2981,19 @@ struct AivisGgmlEp final : OrtEp {
           ep->ort_api_,
           ep->logger_,
           ORT_LOGGING_LEVEL_WARNING,
-          std::string("AivisGgmlExecutionProvider could not inspect graph and claimed no nodes: ") + ex.what());
+          std::string("StyleBertVits2GgmlExecutionProvider could not inspect graph and claimed no nodes: ") + ex.what());
     } catch (const std::exception& ex) {
       LogMessage(
           ep->ort_api_,
           ep->logger_,
           ORT_LOGGING_LEVEL_WARNING,
-          std::string("AivisGgmlExecutionProvider graph inspection failed and claimed no nodes: ") + ex.what());
+          std::string("StyleBertVits2GgmlExecutionProvider graph inspection failed and claimed no nodes: ") + ex.what());
     } catch (...) {
       LogMessage(
           ep->ort_api_,
           ep->logger_,
           ORT_LOGGING_LEVEL_WARNING,
-          "AivisGgmlExecutionProvider graph inspection failed with an unknown error and claimed no nodes.");
+          "StyleBertVits2GgmlExecutionProvider graph inspection failed with an unknown error and claimed no nodes.");
     }
     return nullptr;
   }
@@ -3005,7 +3005,7 @@ struct AivisGgmlEp final : OrtEp {
       size_t count,
       OrtNodeComputeInfo** node_compute_infos,
       OrtNode** ep_context_nodes) noexcept {
-    auto* ep = static_cast<AivisGgmlEp*>(this_ptr);
+    auto* ep = static_cast<StyleBertVits2GgmlEp*>(this_ptr);
     for (size_t i = 0; i < count; ++i) {
       if (node_compute_infos != nullptr) {
         node_compute_infos[i] = nullptr;
@@ -3018,65 +3018,65 @@ struct AivisGgmlEp final : OrtEp {
       return CreateStatus(
           ep->ort_api_,
           ORT_EP_FAIL,
-          "AivisGgmlExecutionProvider Compile was called while graph claiming is disabled.");
+          "StyleBertVits2GgmlExecutionProvider Compile was called while graph claiming is disabled.");
     }
     if (node_compute_infos == nullptr) {
       return CreateStatus(
           ep->ort_api_,
           ORT_INVALID_ARGUMENT,
-          "AivisGgmlExecutionProvider Compile received a null node_compute_infos array.");
+          "StyleBertVits2GgmlExecutionProvider Compile received a null node_compute_infos array.");
     }
     if (ep->config_.ort_ep_context_enable && ep_context_nodes == nullptr) {
       return CreateStatus(
           ep->ort_api_,
           ORT_INVALID_ARGUMENT,
-          "AivisGgmlExecutionProvider Compile received a null ep_context_nodes array.");
+          "StyleBertVits2GgmlExecutionProvider Compile received a null ep_context_nodes array.");
     }
 
     try {
       for (size_t i = 0; i < count; ++i) {
         (void) fused_nodes;
         if (graphs == nullptr || graphs[i] == nullptr) {
-          throw std::runtime_error("AivisGgmlExecutionProvider Compile received a null graph.");
+          throw std::runtime_error("StyleBertVits2GgmlExecutionProvider Compile received a null graph.");
         }
-        AivisGgmlGraphKind graph_kind = AivisGgmlGraphKind::Synthesis;
+        StyleBertVits2GgmlGraphKind graph_kind = StyleBertVits2GgmlGraphKind::Synthesis;
         const GraphSignatureGateResult synthesis_gate = MatchStyleBertVits2SynthesisGraph(graphs[i]);
         const GraphSignatureGateResult jp_bert_gate = MatchStyleBertVits2JpBertGraph(graphs[i]);
-        const EpContextGateResult ep_context_gate = MatchAivisGgmlEpContextGraph(graphs[i]);
+        const EpContextGateResult ep_context_gate = MatchStyleBertVits2GgmlEpContextGraph(graphs[i]);
         std::vector<size_t> input_indices;
         size_t primary_output_index = 0;
         std::shared_ptr<TtsCppRuntime> runtime_for_graph = ep->runtime_;
         if (synthesis_gate.supported) {
           if (!ep->config_.claim_synthesis_graph) {
-            throw std::runtime_error("AivisGgmlExecutionProvider Compile received a synthesis graph while claim_synthesis_graph is disabled.");
+            throw std::runtime_error("StyleBertVits2GgmlExecutionProvider Compile received a synthesis graph while claim_synthesis_graph is disabled.");
           }
           if (ep->runtime_ == nullptr || !ep->runtime_->HasSynthesisModel()) {
-            throw std::runtime_error("AivisGgmlExecutionProvider Compile requires a loaded synthesis runtime.");
+            throw std::runtime_error("StyleBertVits2GgmlExecutionProvider Compile requires a loaded synthesis runtime.");
           }
-          graph_kind = AivisGgmlGraphKind::Synthesis;
+          graph_kind = StyleBertVits2GgmlGraphKind::Synthesis;
           input_indices = BuildInputIndices(graphs[i], kExpectedInputNames);
           primary_output_index = BuildOutputIndex(graphs[i], kExpectedFirstOutputName);
         } else if (jp_bert_gate.supported) {
           if (!ep->config_.claim_jp_bert_graph) {
-            throw std::runtime_error("AivisGgmlExecutionProvider Compile received a JP-BERT graph while claim_jp_bert_graph is disabled.");
+            throw std::runtime_error("StyleBertVits2GgmlExecutionProvider Compile received a JP-BERT graph while claim_jp_bert_graph is disabled.");
           }
           if (ep->runtime_ == nullptr || !ep->runtime_->HasJpBertModel()) {
-            throw std::runtime_error("AivisGgmlExecutionProvider Compile requires a loaded JP-BERT runtime.");
+            throw std::runtime_error("StyleBertVits2GgmlExecutionProvider Compile requires a loaded JP-BERT runtime.");
           }
-          graph_kind = AivisGgmlGraphKind::JpBert;
+          graph_kind = StyleBertVits2GgmlGraphKind::JpBert;
           input_indices = BuildInputIndices(graphs[i], kExpectedJpBertInputNames);
           primary_output_index = BuildOutputIndex(graphs[i], kExpectedJpBertOutputName);
         } else if (ep_context_gate.supported) {
           if (ep->config_.ort_ep_context_enable) {
-            throw std::runtime_error("AivisGgmlExecutionProvider cannot generate an EPContext node from an EPContext graph.");
+            throw std::runtime_error("StyleBertVits2GgmlExecutionProvider cannot generate an EPContext node from an EPContext graph.");
           }
           graph_kind = ep_context_gate.graph_kind;
-          if (graph_kind == AivisGgmlGraphKind::Synthesis) {
+          if (graph_kind == StyleBertVits2GgmlGraphKind::Synthesis) {
             if (!ep->config_.claim_synthesis_graph) {
-              throw std::runtime_error("AivisGgmlExecutionProvider Compile received a synthesis EPContext graph while claim_synthesis_graph is disabled.");
+              throw std::runtime_error("StyleBertVits2GgmlExecutionProvider Compile received a synthesis EPContext graph while claim_synthesis_graph is disabled.");
             }
             if (runtime_for_graph == nullptr || !runtime_for_graph->HasSynthesisModel()) {
-              const AivisGgmlEpConfig runtime_config =
+              const StyleBertVits2GgmlEpConfig runtime_config =
                   BuildConfigFromEpContextPayload(ep->config_, graphs[i], graph_kind);
               bool reused_runtime = false;
               runtime_for_graph = TtsCppRuntimeRegistry::Acquire(runtime_config, reused_runtime);
@@ -3091,10 +3091,10 @@ struct AivisGgmlEp final : OrtEp {
             primary_output_index = BuildOutputIndex(graphs[i], kExpectedFirstOutputName);
           } else {
             if (!ep->config_.claim_jp_bert_graph) {
-              throw std::runtime_error("AivisGgmlExecutionProvider Compile received a JP-BERT EPContext graph while claim_jp_bert_graph is disabled.");
+              throw std::runtime_error("StyleBertVits2GgmlExecutionProvider Compile received a JP-BERT EPContext graph while claim_jp_bert_graph is disabled.");
             }
             if (runtime_for_graph == nullptr || !runtime_for_graph->HasJpBertModel()) {
-              const AivisGgmlEpConfig runtime_config =
+              const StyleBertVits2GgmlEpConfig runtime_config =
                   BuildConfigFromEpContextPayload(ep->config_, graphs[i], graph_kind);
               bool reused_runtime = false;
               runtime_for_graph = TtsCppRuntimeRegistry::Acquire(runtime_config, reused_runtime);
@@ -3110,7 +3110,7 @@ struct AivisGgmlEp final : OrtEp {
           }
         } else {
           throw std::runtime_error(
-              "AivisGgmlExecutionProvider Compile received an unsupported graph signature: synthesis={" +
+              "StyleBertVits2GgmlExecutionProvider Compile received an unsupported graph signature: synthesis={" +
               JoinReasons(synthesis_gate.reasons) + "}; jp-bert={" +
               JoinReasons(jp_bert_gate.reasons) + "}; ep-context={" +
               JoinReasons(ep_context_gate.reasons) + "}");
@@ -3126,7 +3126,7 @@ struct AivisGgmlEp final : OrtEp {
               &ep_context_nodes[i]);
           if (status != nullptr) {
             for (size_t cleanup_index = 0; cleanup_index < count; ++cleanup_index) {
-              delete static_cast<AivisGgmlNodeComputeInfo*>(node_compute_infos[cleanup_index]);
+              delete static_cast<StyleBertVits2GgmlNodeComputeInfo*>(node_compute_infos[cleanup_index]);
               node_compute_infos[cleanup_index] = nullptr;
               if (ep_context_nodes[cleanup_index] != nullptr) {
                 ep->ort_api_.ReleaseNode(ep_context_nodes[cleanup_index]);
@@ -3139,7 +3139,7 @@ struct AivisGgmlEp final : OrtEp {
               std::string("created EPContext node graph_kind=") +
               GraphKindName(graph_kind) +
               " index=" + std::to_string(i));
-          node_compute_infos[i] = new AivisGgmlNodeComputeInfo(
+          node_compute_infos[i] = new StyleBertVits2GgmlNodeComputeInfo(
               ep->ort_api_,
               runtime_for_graph,
               graph_kind,
@@ -3147,7 +3147,7 @@ struct AivisGgmlEp final : OrtEp {
               primary_output_index);
           continue;
         }
-        node_compute_infos[i] = new AivisGgmlNodeComputeInfo(
+        node_compute_infos[i] = new StyleBertVits2GgmlNodeComputeInfo(
             ep->ort_api_,
             runtime_for_graph,
             graph_kind,
@@ -3158,17 +3158,17 @@ struct AivisGgmlEp final : OrtEp {
       return nullptr;
     } catch (const std::bad_alloc&) {
       for (size_t i = 0; i < count; ++i) {
-        delete static_cast<AivisGgmlNodeComputeInfo*>(node_compute_infos[i]);
+        delete static_cast<StyleBertVits2GgmlNodeComputeInfo*>(node_compute_infos[i]);
         node_compute_infos[i] = nullptr;
         if (ep_context_nodes != nullptr && ep_context_nodes[i] != nullptr) {
           ep->ort_api_.ReleaseNode(ep_context_nodes[i]);
           ep_context_nodes[i] = nullptr;
         }
       }
-      return CreateStatus(ep->ort_api_, ORT_FAIL, "Out of memory compiling Aivis GGML graph.");
+      return CreateStatus(ep->ort_api_, ORT_FAIL, "Out of memory compiling Style-Bert-VITS2 GGML graph.");
     } catch (const Ort::Exception& ex) {
       for (size_t i = 0; i < count; ++i) {
-        delete static_cast<AivisGgmlNodeComputeInfo*>(node_compute_infos[i]);
+        delete static_cast<StyleBertVits2GgmlNodeComputeInfo*>(node_compute_infos[i]);
         node_compute_infos[i] = nullptr;
         if (ep_context_nodes != nullptr && ep_context_nodes[i] != nullptr) {
           ep->ort_api_.ReleaseNode(ep_context_nodes[i]);
@@ -3178,7 +3178,7 @@ struct AivisGgmlEp final : OrtEp {
       return CreateStatus(ep->ort_api_, ORT_FAIL, ex.what());
     } catch (const std::exception& ex) {
       for (size_t i = 0; i < count; ++i) {
-        delete static_cast<AivisGgmlNodeComputeInfo*>(node_compute_infos[i]);
+        delete static_cast<StyleBertVits2GgmlNodeComputeInfo*>(node_compute_infos[i]);
         node_compute_infos[i] = nullptr;
         if (ep_context_nodes != nullptr && ep_context_nodes[i] != nullptr) {
           ep->ort_api_.ReleaseNode(ep_context_nodes[i]);
@@ -3188,14 +3188,14 @@ struct AivisGgmlEp final : OrtEp {
       return CreateStatus(ep->ort_api_, ORT_FAIL, ex.what());
     } catch (...) {
       for (size_t i = 0; i < count; ++i) {
-        delete static_cast<AivisGgmlNodeComputeInfo*>(node_compute_infos[i]);
+        delete static_cast<StyleBertVits2GgmlNodeComputeInfo*>(node_compute_infos[i]);
         node_compute_infos[i] = nullptr;
         if (ep_context_nodes != nullptr && ep_context_nodes[i] != nullptr) {
           ep->ort_api_.ReleaseNode(ep_context_nodes[i]);
           ep_context_nodes[i] = nullptr;
         }
       }
-      return CreateStatus(ep->ort_api_, ORT_FAIL, "Unknown error compiling Aivis GGML graph.");
+      return CreateStatus(ep->ort_api_, ORT_FAIL, "Unknown error compiling Style-Bert-VITS2 GGML graph.");
     }
   }
 
@@ -3207,7 +3207,7 @@ struct AivisGgmlEp final : OrtEp {
       return;
     }
     for (size_t i = 0; i < num_node_compute_infos; ++i) {
-      delete static_cast<AivisGgmlNodeComputeInfo*>(node_compute_infos[i]);
+      delete static_cast<StyleBertVits2GgmlNodeComputeInfo*>(node_compute_infos[i]);
       node_compute_infos[i] = nullptr;
     }
   }
@@ -3218,7 +3218,7 @@ struct AivisGgmlEp final : OrtEp {
     if (this_ptr == nullptr) {
       return nullptr;
     }
-    auto* ep = static_cast<AivisGgmlEp*>(this_ptr);
+    auto* ep = static_cast<StyleBertVits2GgmlEp*>(this_ptr);
     try {
       ep->compatibility_info_ =
           BuildCompiledModelCompatibilityInfo(ep->config_, graph);
@@ -3232,13 +3232,13 @@ struct AivisGgmlEp final : OrtEp {
   const OrtApi& ort_api_;
   const OrtEpApi& ep_api_;
   const OrtLogger* logger_;
-  AivisGgmlEpConfig config_;
+  StyleBertVits2GgmlEpConfig config_;
   std::shared_ptr<TtsCppRuntime> runtime_;
   std::string compatibility_info_;
 };
 
-struct AivisGgmlEpFactory final : OrtEpFactory {
-  AivisGgmlEpFactory(
+struct StyleBertVits2GgmlEpFactory final : OrtEpFactory {
+  StyleBertVits2GgmlEpFactory(
       const OrtApi& ort_api,
       const OrtEpApi& ep_api,
       const OrtLogger* default_logger,
@@ -3295,7 +3295,7 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
       OrtEpDevice** ep_devices,
       size_t max_ep_devices,
       size_t* p_num_ep_devices) noexcept {
-    auto* factory = static_cast<AivisGgmlEpFactory*>(this_ptr);
+    auto* factory = static_cast<StyleBertVits2GgmlEpFactory*>(this_ptr);
     if (p_num_ep_devices == nullptr) {
       return CreateStatus(factory->ort_api_, ORT_INVALID_ARGUMENT, "num_ep_devices output is null.");
     }
@@ -3317,15 +3317,15 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
       factory->ort_api_.CreateKeyValuePairs(&ep_metadata);
       factory->ort_api_.CreateKeyValuePairs(&ep_options);
 
-      factory->ort_api_.AddKeyValuePair(ep_metadata, "aivis.stage", kStage);
-      factory->ort_api_.AddKeyValuePair(ep_metadata, "aivis.runtime_registry_contract", kRuntimeRegistryContract);
-      factory->ort_api_.AddKeyValuePair(ep_metadata, "aivis.tts_cpp_runtime_contract", kTtsCppRuntimeContract);
-      factory->ort_api_.AddKeyValuePair(ep_metadata, "aivis.official_ep_context", "generation_supported");
-      factory->ort_api_.AddKeyValuePair(ep_metadata, "aivis.official_ep_context_inference", "lazy_artifact_restore_tts_library_required");
+      factory->ort_api_.AddKeyValuePair(ep_metadata, "style_bert_vits2_ggml.stage", kStage);
+      factory->ort_api_.AddKeyValuePair(ep_metadata, "style_bert_vits2_ggml.runtime_registry_contract", kRuntimeRegistryContract);
+      factory->ort_api_.AddKeyValuePair(ep_metadata, "style_bert_vits2_ggml.tts_cpp_runtime_contract", kTtsCppRuntimeContract);
+      factory->ort_api_.AddKeyValuePair(ep_metadata, "style_bert_vits2_ggml.official_ep_context", "generation_supported");
+      factory->ort_api_.AddKeyValuePair(ep_metadata, "style_bert_vits2_ggml.official_ep_context_inference", "lazy_artifact_restore_tts_library_required");
       factory->ort_api_.AddKeyValuePair(ep_metadata, "registration_name", factory->registration_name_.c_str());
-      factory->ort_api_.AddKeyValuePair(ep_metadata, "aivis.supported_backends", "vulkan,metal,cpu");
-      factory->ort_api_.AddKeyValuePair(ep_metadata, "aivis.supported_precision", "accurate,fast");
-      factory->ort_api_.AddKeyValuePair(ep_metadata, "aivis.supported_vulkan_math_modes", "f32,coopmat,fp16,fp16-coopmat");
+      factory->ort_api_.AddKeyValuePair(ep_metadata, "style_bert_vits2_ggml.supported_backends", "vulkan,metal,cpu");
+      factory->ort_api_.AddKeyValuePair(ep_metadata, "style_bert_vits2_ggml.supported_precision", "accurate,fast");
+      factory->ort_api_.AddKeyValuePair(ep_metadata, "style_bert_vits2_ggml.supported_vulkan_math_modes", "f32,coopmat,fp16,fp16-coopmat");
       factory->ort_api_.AddKeyValuePair(ep_options, "backend", kDefaultBackend);
       factory->ort_api_.AddKeyValuePair(ep_options, "precision", kDefaultPrecision);
       factory->ort_api_.AddKeyValuePair(ep_options, "vulkan_math_mode", kDefaultVulkanMathMode);
@@ -3365,7 +3365,7 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
       const OrtSessionOptions* session_options,
       const OrtLogger* logger,
       OrtEp** ep) noexcept {
-    auto* factory = static_cast<AivisGgmlEpFactory*>(this_ptr);
+    auto* factory = static_cast<StyleBertVits2GgmlEpFactory*>(this_ptr);
     if (ep == nullptr) {
       return CreateStatus(factory->ort_api_, ORT_INVALID_ARGUMENT, "EP output is null.");
     }
@@ -3375,12 +3375,12 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
       return CreateStatus(
           factory->ort_api_,
           ORT_INVALID_ARGUMENT,
-          "AivisGgmlExecutionProvider bootstrap EP expects exactly one device.");
+          "StyleBertVits2GgmlExecutionProvider bootstrap EP expects exactly one device.");
     }
 
     try {
       const OrtLogger* ep_logger = logger != nullptr ? logger : factory->default_logger_;
-      AivisGgmlEpConfig config = ReadEpConfig(session_options);
+      StyleBertVits2GgmlEpConfig config = ReadEpConfig(session_options);
       OrtStatus* status = ValidateEpConfig(factory->ort_api_, config);
       if (status != nullptr) {
         return status;
@@ -3396,7 +3396,7 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
             factory->ort_api_,
             ep_logger,
             ORT_LOGGING_LEVEL_INFO,
-            std::string("AivisGgmlExecutionProvider ") +
+            std::string("StyleBertVits2GgmlExecutionProvider ") +
                 (reused_runtime ? "reused" : "eagerly loaded") +
                 " configured TTS.cpp GGUF runtime. " +
                 runtime->ContractSummary() + ".");
@@ -3405,9 +3405,9 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
           factory->ort_api_,
           ep_logger,
           ORT_LOGGING_LEVEL_INFO,
-          "Creating AivisGgmlExecutionProvider with " + ConfigSummary(config) + ".");
+          "Creating StyleBertVits2GgmlExecutionProvider with " + ConfigSummary(config) + ".");
       TraceMessage("CreateEp " + ConfigSummary(config));
-      *ep = new AivisGgmlEp(
+      *ep = new StyleBertVits2GgmlEp(
           factory->ort_api_,
           factory->ep_api_,
           ep_logger,
@@ -3415,16 +3415,16 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
           std::move(runtime));
       return nullptr;
     } catch (const std::bad_alloc&) {
-      return CreateStatus(factory->ort_api_, ORT_FAIL, "Out of memory creating Aivis GGML EP.");
+      return CreateStatus(factory->ort_api_, ORT_FAIL, "Out of memory creating Style-Bert-VITS2 GGML EP.");
     } catch (const std::exception& ex) {
       return CreateStatus(factory->ort_api_, ORT_FAIL, ex.what());
     } catch (...) {
-      return CreateStatus(factory->ort_api_, ORT_FAIL, "Unknown error creating Aivis GGML EP.");
+      return CreateStatus(factory->ort_api_, ORT_FAIL, "Unknown error creating Style-Bert-VITS2 GGML EP.");
     }
   }
 
   static void ORT_API_CALL ReleaseEpImpl(OrtEpFactory* /*this_ptr*/, OrtEp* ep) noexcept {
-    delete static_cast<AivisGgmlEp*>(ep);
+    delete static_cast<StyleBertVits2GgmlEp*>(ep);
   }
 
   static OrtStatus* ORT_API_CALL ValidateCompiledModelCompatibilityInfoImpl(
@@ -3433,7 +3433,7 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
       size_t /*num_devices*/,
       const char* compatibility_info,
       OrtCompiledModelCompatibility* model_compatibility) noexcept {
-    auto* factory = static_cast<AivisGgmlEpFactory*>(this_ptr);
+    auto* factory = static_cast<StyleBertVits2GgmlEpFactory*>(this_ptr);
     if (model_compatibility == nullptr) {
       return CreateStatus(
           factory->ort_api_,
@@ -3442,7 +3442,7 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
     }
 
     *model_compatibility =
-        ValidateAivisCompiledModelCompatibilityInfo(compatibility_info);
+        ValidateStyleBertVits2CompiledModelCompatibilityInfo(compatibility_info);
     return nullptr;
   }
 
@@ -3479,11 +3479,11 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
       const OrtMemoryDevice* /*memory_device*/,
       const OrtKeyValuePairs* /*stream_options*/,
       OrtSyncStreamImpl** stream) noexcept {
-    auto* factory = static_cast<AivisGgmlEpFactory*>(this_ptr);
+    auto* factory = static_cast<StyleBertVits2GgmlEpFactory*>(this_ptr);
     if (stream != nullptr) {
       *stream = nullptr;
     }
-    return CreateStatus(factory->ort_api_, ORT_NOT_IMPLEMENTED, "Aivis GGML EP has no stream support yet.");
+    return CreateStatus(factory->ort_api_, ORT_NOT_IMPLEMENTED, "Style-Bert-VITS2 GGML EP has no stream support yet.");
   }
 
   static OrtStatus* ORT_API_CALL GetHardwareDeviceIncompatibilityDetailsImpl(
@@ -3497,20 +3497,20 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
       OrtEpFactory* this_ptr,
       const OrtEpDevice* /*ep_device*/,
       OrtExternalResourceImporterImpl** out_importer) noexcept {
-    auto* factory = static_cast<AivisGgmlEpFactory*>(this_ptr);
+    auto* factory = static_cast<StyleBertVits2GgmlEpFactory*>(this_ptr);
     if (out_importer != nullptr) {
       *out_importer = nullptr;
     }
     return CreateStatus(
         factory->ort_api_,
         ORT_NOT_IMPLEMENTED,
-        "Aivis GGML EP has no external resource importer yet.");
+        "Style-Bert-VITS2 GGML EP has no external resource importer yet.");
   }
 
   static OrtStatus* ORT_API_CALL GetNumCustomOpDomainsImpl(
       OrtEpFactory* this_ptr,
       size_t* num_domains) noexcept {
-    auto* factory = static_cast<AivisGgmlEpFactory*>(this_ptr);
+    auto* factory = static_cast<StyleBertVits2GgmlEpFactory*>(this_ptr);
     if (num_domains == nullptr) {
       return CreateStatus(factory->ort_api_, ORT_INVALID_ARGUMENT, "num_domains output is null.");
     }
@@ -3522,12 +3522,12 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
       OrtEpFactory* this_ptr,
       OrtCustomOpDomain** /*domains*/,
       size_t num_domains) noexcept {
-    auto* factory = static_cast<AivisGgmlEpFactory*>(this_ptr);
+    auto* factory = static_cast<StyleBertVits2GgmlEpFactory*>(this_ptr);
     if (num_domains != 0) {
       return CreateStatus(
           factory->ort_api_,
           ORT_INVALID_ARGUMENT,
-          "Aivis GGML EP bootstrap has no custom op domains.");
+          "Style-Bert-VITS2 GGML EP bootstrap has no custom op domains.");
     }
     return nullptr;
   }
@@ -3537,21 +3537,21 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
       OrtEpFactory* this_ptr,
       const OrtEpDevice* /*ep_device*/,
       const OrtGraphicsInteropConfig* /*config*/) noexcept {
-    auto* factory = static_cast<AivisGgmlEpFactory*>(this_ptr);
+    auto* factory = static_cast<StyleBertVits2GgmlEpFactory*>(this_ptr);
     return CreateStatus(
         factory->ort_api_,
         ORT_NOT_IMPLEMENTED,
-        "Aivis GGML EP has no graphics interop support yet.");
+        "Style-Bert-VITS2 GGML EP has no graphics interop support yet.");
   }
 
   static OrtStatus* ORT_API_CALL DeinitGraphicsInteropImpl(
       OrtEpFactory* this_ptr,
       const OrtEpDevice* /*ep_device*/) noexcept {
-    auto* factory = static_cast<AivisGgmlEpFactory*>(this_ptr);
+    auto* factory = static_cast<StyleBertVits2GgmlEpFactory*>(this_ptr);
     return CreateStatus(
         factory->ort_api_,
         ORT_NOT_IMPLEMENTED,
-        "Aivis GGML EP has no graphics interop support yet.");
+        "Style-Bert-VITS2 GGML EP has no graphics interop support yet.");
   }
 #endif
 
@@ -3565,7 +3565,7 @@ struct AivisGgmlEpFactory final : OrtEpFactory {
 
 extern "C" {
 
-AIVIS_GGML_EP_EXPORT OrtStatus* CreateEpFactories(
+STYLE_BERT_VITS2_GGML_EP_EXPORT OrtStatus* CreateEpFactories(
     const char* registration_name,
     const OrtApiBase* ort_api_base,
     const OrtLogger* default_logger,
@@ -3593,7 +3593,7 @@ AIVIS_GGML_EP_EXPORT OrtStatus* CreateEpFactories(
   Ort::InitApi(ort_api);
 
   try {
-    auto factory = std::make_unique<AivisGgmlEpFactory>(
+    auto factory = std::make_unique<StyleBertVits2GgmlEpFactory>(
         *ort_api,
         *ep_api,
         default_logger,
@@ -3602,16 +3602,16 @@ AIVIS_GGML_EP_EXPORT OrtStatus* CreateEpFactories(
     *num_factories = 1;
     return nullptr;
   } catch (const std::bad_alloc&) {
-    return CreateStatus(*ort_api, ORT_FAIL, "Out of memory creating Aivis GGML EP factory.");
+    return CreateStatus(*ort_api, ORT_FAIL, "Out of memory creating Style-Bert-VITS2 GGML EP factory.");
   } catch (const std::exception& ex) {
     return CreateStatus(*ort_api, ORT_FAIL, ex.what());
   } catch (...) {
-    return CreateStatus(*ort_api, ORT_FAIL, "Unknown error creating Aivis GGML EP factory.");
+    return CreateStatus(*ort_api, ORT_FAIL, "Unknown error creating Style-Bert-VITS2 GGML EP factory.");
   }
 }
 
-AIVIS_GGML_EP_EXPORT OrtStatus* ReleaseEpFactory(OrtEpFactory* factory) {
-  delete static_cast<AivisGgmlEpFactory*>(factory);
+STYLE_BERT_VITS2_GGML_EP_EXPORT OrtStatus* ReleaseEpFactory(OrtEpFactory* factory) {
+  delete static_cast<StyleBertVits2GgmlEpFactory*>(factory);
   return nullptr;
 }
 

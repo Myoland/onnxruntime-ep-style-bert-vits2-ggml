@@ -1,4 +1,4 @@
-"""Map Aivis ONNX initializer names to TTS.cpp Style-Bert-VITS2 GGUF keys."""
+"""Map Style-Bert-VITS2 ONNX initializer names to TTS.cpp Style-Bert-VITS2 GGUF keys."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from onnxruntime_ep_aivis_ggml.initializer_pack import (
+from onnxruntime_ep_style_bert_vits2_ggml.initializer_pack import (
     InitializerTensorRecord,
     write_initializer_tensor_pack,
 )

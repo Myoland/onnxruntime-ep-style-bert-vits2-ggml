@@ -8,7 +8,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
-from onnxruntime_ep_aivis_ggml.tts_cpp_mapping import TensorMappingReport
+from onnxruntime_ep_style_bert_vits2_ggml.tts_cpp_mapping import TensorMappingReport
 
 STYLE_BERT_VITS2_ARCHITECTURE = "style-bert-vits2"
 
@@ -66,7 +66,7 @@ def write_tts_cpp_style_bert_vits2_gguf(
     except ModuleNotFoundError as ex:
         raise RuntimeError(
             "GGUF writing requires the optional 'gguf' Python package. "
-            "Install the converter extra for onnxruntime-ep-aivis-ggml."
+            "Install the converter extra for onnxruntime-ep-style-bert-vits2-ggml."
         ) from ex
 
     import numpy as np

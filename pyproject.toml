@@ -1,7 +1,7 @@
 [project]
-name = "onnxruntime-ep-aivis-ggml"
+name = "onnxruntime-ep-style-bert-vits2-ggml"
 version = "0.1.0"
-description = "Aivis Style-Bert-VITS2 ggml ONNX Runtime Plugin Execution Provider"
+description = "Style-Bert-VITS2 ggml ONNX Runtime Plugin Execution Provider"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.11"
@@ -37,9 +37,9 @@ select = ["E", "F", "B", "I", "W", "UP"]
 ignore = ["E501"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/onnxruntime_ep_aivis_ggml"]
+packages = ["src/onnxruntime_ep_style_bert_vits2_ggml"]
 artifacts = [
-  "src/onnxruntime_ep_aivis_ggml/lib/*",
+  "src/onnxruntime_ep_style_bert_vits2_ggml/lib/*",
 ]
 
 [tool.hatch.build.targets.sdist]

@@ -1,4 +1,4 @@
-"""Build a local Aivis GGML ONNX Runtime Plugin EP bundle."""
+"""Build a local Style-Bert-VITS2 GGML ONNX Runtime Plugin EP bundle."""
 
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ DEFAULT_GGML_REPO = "https://github.com/Myoland/ggml.git"
 
 @dataclass(frozen=True)
 class PlatformConfig:
+    bundle_tag: str
     ort_version: str
     ort_archive: str
     tts_library_names: tuple[str, ...]
@@ -37,6 +38,7 @@ def _platform_config() -> PlatformConfig:
     machine = platform.machine().lower()
     if system == "Linux" and machine in {"x86_64", "amd64"}:
         return PlatformConfig(
+            bundle_tag="linux-x64",
             ort_version="1.26.0",
             ort_archive="onnxruntime-linux-x64-{version}.tgz",
             tts_library_names=("libtts.so",),
@@ -45,6 +47,7 @@ def _platform_config() -> PlatformConfig:
         )
     if system == "Darwin" and machine == "x86_64":
         return PlatformConfig(
+            bundle_tag="macos-x64",
             ort_version="1.23.2",
             ort_archive="onnxruntime-osx-x86_64-{version}.tgz",
             tts_library_names=("libtts.dylib",),
@@ -53,6 +56,7 @@ def _platform_config() -> PlatformConfig:
         )
     if system == "Darwin" and machine in {"arm64", "aarch64"}:
         return PlatformConfig(
+            bundle_tag="macos-arm64",
             ort_version="1.27.0",
             ort_archive="onnxruntime-osx-arm64-{version}.tgz",
             tts_library_names=("libtts.dylib",),
@@ -61,6 +65,7 @@ def _platform_config() -> PlatformConfig:
         )
     if system == "Windows" and machine in {"amd64", "x86_64"}:
         return PlatformConfig(
+            bundle_tag="windows-x64",
             ort_version="1.24.4",
             ort_archive="onnxruntime-win-x64-{version}.zip",
             tts_library_names=("tts.dll", "libtts.dll"),
@@ -71,15 +76,41 @@ def _platform_config() -> PlatformConfig:
 
 
 def _run(command: Sequence[str], *, cwd: Path | None = None) -> None:
-    print("+ " + " ".join(command))
+    print("+ " + " ".join(command), flush=True)
     subprocess.run(command, cwd=cwd, check=True)
+
+
+def _plugin_ep_preset() -> str:
+    if platform.system() == "Windows":
+        return "plugin-ep-release-msvc"
+    return "plugin-ep-release"
+
+
+def _reset_cmake_build_dir_if_source_mismatch(
+    build_dir: Path, source_dir: Path
+) -> None:
+    cache_path = build_dir / "CMakeCache.txt"
+    if not cache_path.exists():
+        return
+    expected = source_dir.resolve()
+    for line in cache_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if not line.startswith("CMAKE_HOME_DIRECTORY:INTERNAL="):
+            continue
+        actual = Path(line.split("=", 1)[1]).resolve()
+        if actual != expected:
+            print(
+                f"reset: {build_dir} was configured for {actual}, expected {expected}",
+                flush=True,
+            )
+            shutil.rmtree(build_dir)
+        return
 
 
 def _download(url: str, output_path: Path) -> None:
     if output_path.exists() and output_path.stat().st_size > 0:
         return
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"download: {url}")
+    print(f"download: {url}", flush=True)
     with urllib.request.urlopen(url) as response:
         output_path.write_bytes(response.read())
 
@@ -182,12 +213,32 @@ def _build_tts_cpp(
     )
 
 
-def _build_plugin_ep(*, ort_include_dir: Path, native_build_dir: Path) -> None:
+def _build_plugin_ep(
+    *, ort_include_dir: Path, native_build_dir: Path, use_cmake_preset: bool
+) -> None:
+    _reset_cmake_build_dir_if_source_mismatch(native_build_dir, REPO_ROOT)
+    if use_cmake_preset:
+        preset = _plugin_ep_preset()
+        _run(["cmake", "--preset", preset, f"-DORT_INCLUDE_DIR={ort_include_dir}"])
+        _run(["cmake", "--build", "--preset", preset])
+        _run(
+            [
+                "cmake",
+                "--install",
+                str(REPO_ROOT / "build" / "onnxruntime-ep-native"),
+                "--config",
+                "Release",
+                "--prefix",
+                str(REPO_ROOT / "src"),
+            ]
+        )
+        return
+
     _run(
         [
             "cmake",
             "-S",
-            str(REPO_ROOT / "native"),
+            str(REPO_ROOT),
             "-B",
             str(native_build_dir),
             "-DCMAKE_BUILD_TYPE=Release",
@@ -244,7 +295,8 @@ def _patch_linux_rpath(libraries: Sequence[Path]) -> None:
     patchelf = shutil.which("patchelf")
     if patchelf is None:
         print(
-            "warning: patchelf was not found; copied libraries keep their original rpath"
+            "warning: patchelf was not found; copied libraries keep their original rpath",
+            flush=True,
         )
         return
     for library in libraries:
@@ -263,20 +315,25 @@ def _file_sha256(path: Path) -> str:
 def _write_manifest(
     *,
     bundle_dir: Path,
+    bundle_tag: str,
     ort_version: str,
+    tts_cpp_repo: str,
     tts_cpp_ref: str,
+    ggml_repo: str,
     plugin_libraries: Sequence[Path],
     tts_libraries: Sequence[Path],
     ggml_libraries: Sequence[Path],
 ) -> None:
     libraries = [*plugin_libraries, *tts_libraries, *ggml_libraries]
     manifest = {
-        "schema": "aivis-ggml-runtime-bundle-v1",
-        "provider_name": "AivisGgmlExecutionProvider",
+        "schema": "style-bert-vits2-ggml-runtime-bundle-v1",
+        "bundle_tag": bundle_tag,
+        "provider_name": "StyleBertVits2GgmlExecutionProvider",
         "ort_version": ort_version,
         "ort_plugin_ep_api_version": 26,
-        "tts_cpp_repo": DEFAULT_TTS_CPP_REPO,
+        "tts_cpp_repo": tts_cpp_repo,
         "tts_cpp_ref": tts_cpp_ref,
+        "ggml_repo": ggml_repo,
         "tts_cpp_runtime_abi_version": 1,
         "gguf_schema_version": 1,
         "libraries": [
@@ -300,14 +357,16 @@ def _build_bundle(
     tts_build_dir: Path,
     config: PlatformConfig,
     ort_version: str,
+    tts_cpp_repo: str,
     tts_cpp_ref: str,
+    ggml_repo: str,
 ) -> None:
     if output_dir.exists():
         shutil.rmtree(output_dir)
-    package_lib_dir = REPO_ROOT / "src" / "onnxruntime_ep_aivis_ggml" / "lib"
+    package_lib_dir = REPO_ROOT / "src" / "onnxruntime_ep_style_bert_vits2_ggml" / "lib"
     plugin_libraries = _copy_existing_files(
-        package_lib_dir.glob("*aivis_ggml_onnx_ep*"),
-        dest_dir=output_dir / "onnxruntime_ep_aivis_ggml" / "lib",
+        package_lib_dir.glob("*style_bert_vits2_ggml_onnx_ep*"),
+        dest_dir=output_dir / "onnxruntime_ep_style_bert_vits2_ggml" / "lib",
         required_label="Plugin EP",
     )
 
@@ -331,8 +390,11 @@ def _build_bundle(
     _patch_linux_rpath([*tts_libraries, *ggml_libraries])
     _write_manifest(
         bundle_dir=output_dir,
+        bundle_tag=config.bundle_tag,
         ort_version=ort_version,
+        tts_cpp_repo=tts_cpp_repo,
         tts_cpp_ref=tts_cpp_ref,
+        ggml_repo=ggml_repo,
         plugin_libraries=plugin_libraries,
         tts_libraries=tts_libraries,
         ggml_libraries=ggml_libraries,
@@ -345,7 +407,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--build-dir", type=Path, default=REPO_ROOT / "build")
     parser.add_argument("--download-dir", type=Path, default=REPO_ROOT / "download")
     parser.add_argument(
-        "--output-dir", type=Path, default=REPO_ROOT / "dist" / "aivis-ggml-runtime"
+        "--output-dir",
+        type=Path,
+        default=REPO_ROOT
+        / "dist"
+        / f"style-bert-vits2-ggml-runtime-{config.bundle_tag}",
     )
     parser.add_argument("--ort-version", default=config.ort_version)
     parser.add_argument("--ort-include-dir", type=Path, default=None)
@@ -358,6 +424,11 @@ def _parse_args() -> argparse.Namespace:
         "--reuse-tts-cpp-build",
         action="store_true",
         help="Use --tts-cpp-build-dir as an already-built TTS.cpp tree.",
+    )
+    parser.add_argument(
+        "--no-cmake-preset",
+        action="store_true",
+        help="Configure the Plugin EP with explicit -S/-B arguments instead of CMakePresets.",
     )
     return parser.parse_args()
 
@@ -392,6 +463,8 @@ def main() -> None:
     _build_plugin_ep(
         ort_include_dir=ort_include_dir,
         native_build_dir=build_dir / "onnxruntime-ep-native",
+        use_cmake_preset=not args.no_cmake_preset
+        and args.build_dir.resolve() == (REPO_ROOT / "build").resolve(),
     )
     if not args.reuse_tts_cpp_build:
         _prepare_tts_cpp_source(
@@ -408,10 +481,15 @@ def main() -> None:
         tts_build_dir=tts_build_dir,
         config=config,
         ort_version=args.ort_version,
+        tts_cpp_repo=args.tts_cpp_repo,
         tts_cpp_ref=args.tts_cpp_ref,
+        ggml_repo=args.ggml_repo,
     )
-    print(f"bundle: {output_dir}")
-    print(f"engine env: AIVIS_ONNX_GGML_BUNDLE_DIR={output_dir}")
+    print(f"bundle: {output_dir}", flush=True)
+    print(
+        f"engine env: STYLE_BERT_VITS2_GGML_BUNDLE_DIR={output_dir}",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":
