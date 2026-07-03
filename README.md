@@ -13,6 +13,13 @@ Style-Bert-VITS2 の GGML 推論を ONNX Runtime Plugin Execution Provider
 downstream engine 側は `--onnx_provider ggml` が明示された場合だけこの package を
 import し、`StyleBertVits2GgmlExecutionProvider` をフォールバック Provider より前に追加します。
 
+## Documents
+
+- [Build](docs/build.md)
+- [Downstream Engine integration](docs/engine-integration.md)
+- [Benchmark reproduction](docs/benchmark.md)
+- [JP-BERT GGUF quantization](docs/jp-bert-gguf-quantization.md)
+
 ## Build runtime bundle
 
 Linux / macOS:

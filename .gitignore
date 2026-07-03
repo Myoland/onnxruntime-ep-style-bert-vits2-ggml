@@ -7,4 +7,5 @@ __pycache__/
 build/
 dist/
 download/
+benchmark-artifacts/
 src/onnxruntime_ep_style_bert_vits2_ggml/lib/

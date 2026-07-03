@@ -47,3 +47,9 @@ dist/run/onnxruntime_ep_style_bert_vits2_ggml/lib/libstyle_bert_vits2_ggml_onnx_
 ```
 
 Use the platform equivalent names on macOS and Windows.
+
+## Benchmark
+
+After packaging or preparing a local runtime bundle, use
+[Benchmark reproduction](benchmark.md) to verify provider selection, RTF, PCM
+comparison, and generated review artifacts.

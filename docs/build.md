@@ -77,3 +77,9 @@ dist/style-bert-vits2-ggml-runtime-<platform>/
 
 `manifest.json` records the ONNX Runtime version, TTS.cpp ref, ggml repository,
 runtime ABI version, GGUF schema version, and library checksums.
+
+## Related workflows
+
+- [Downstream Engine integration](engine-integration.md)
+- [Benchmark reproduction](benchmark.md)
+- [JP-BERT GGUF quantization](jp-bert-gguf-quantization.md)

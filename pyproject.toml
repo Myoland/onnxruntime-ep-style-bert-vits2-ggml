@@ -48,6 +48,8 @@ artifacts = [
 include = [
   "/README.md",
   "/pyproject.toml",
+  "/docs",
+  "/scripts",
   "/src",
   "/native",
 ]
