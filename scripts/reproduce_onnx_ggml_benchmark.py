@@ -549,10 +549,13 @@ def main() -> None:
     args = _parse_args()
     model = MODEL_PRESETS[args.model]
     args.engine_dir = args.engine_dir.expanduser().resolve()
-    if not (args.engine_dir / "run.py").is_file() or not (
-        args.engine_dir / "voicevox_engine"
-    ).is_dir():
-        raise SystemExit(f"AivisSpeech-Engine checkout was not found: {args.engine_dir}")
+    if (
+        not (args.engine_dir / "run.py").is_file()
+        or not (args.engine_dir / "voicevox_engine").is_dir()
+    ):
+        raise SystemExit(
+            f"AivisSpeech-Engine checkout was not found: {args.engine_dir}"
+        )
     if args.aivmx_path is None:
         default_aivmx_path = default_aivmx_download_path(
             model, root_dir=_EP_REPO_ROOT
