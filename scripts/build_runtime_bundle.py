@@ -14,7 +14,7 @@ import urllib.request
 import zipfile
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -133,14 +133,23 @@ def _extract_archive(archive_path: Path, output_dir: Path) -> None:
         shutil.rmtree(output_dir / "lib", ignore_errors=True)
     else:
         with tarfile.open(archive_path) as archive:
-            top_level = archive.getmembers()[0].name.split("/", 1)[0]
+            top_level_candidates = set[str]()
+            for member in archive.getmembers():
+                parts = [
+                    part for part in PurePosixPath(member.name).parts if part != "."
+                ]
+                if parts:
+                    top_level_candidates.add(parts[0])
             archive.extractall(output_dir)
-        extracted_root = output_dir / top_level
-        for child in extracted_root.iterdir():
-            if child.name == "lib":
-                continue
-            shutil.move(str(child), output_dir / child.name)
-        shutil.rmtree(extracted_root, ignore_errors=True)
+        if len(top_level_candidates) == 1:
+            extracted_root = output_dir / next(iter(top_level_candidates))
+            if extracted_root.is_dir():
+                for child in extracted_root.iterdir():
+                    if child.name == "lib":
+                        continue
+                    shutil.move(str(child), output_dir / child.name)
+                shutil.rmtree(extracted_root, ignore_errors=True)
+        shutil.rmtree(output_dir / "lib", ignore_errors=True)
     marker.write_text("ok\n", encoding="utf-8")
 
 
