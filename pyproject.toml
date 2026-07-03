@@ -9,7 +9,9 @@ dependencies = []
 
 [project.optional-dependencies]
 convert = [
+  "aivmlib>=1.2.1,<2.0.0",
   "gguf",
+  "huggingface-hub",
   "numpy",
   "onnx",
   "safetensors",
