@@ -101,3 +101,19 @@ runtime ABI version, GGUF schema version, and library checksums.
 - [Downstream Engine integration](engine-integration.md)
 - [Benchmark reproduction](benchmark.md)
 - [JP-BERT GGUF quantization](jp-bert-gguf-quantization.md)
+
+## macOS arm64 release workflow
+
+The repository includes a GitHub Actions workflow for publishing the macOS
+arm64 runtime bundle as a GitHub Release asset.
+
+- Workflow: `.github/workflows/release-macos-runtime.yml`
+- Runner: `macos-14`
+- Bundle: `dist/style-bert-vits2-ggml-runtime-macos-arm64/`
+- Assets: `style-bert-vits2-ggml-runtime-macos-arm64-<tag>.tar.gz` and
+  `.sha256`
+
+Pull requests, pushes to `main`, and manual `workflow_dispatch` runs build and
+validate the runtime bundle. Push a tag matching `v*` or `runtime-macos-v*` to
+publish the tarball to the corresponding GitHub Release. The release workflow
+validates `manifest.json` and library checksums before publishing.

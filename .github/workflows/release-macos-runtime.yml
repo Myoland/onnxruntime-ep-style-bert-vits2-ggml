@@ -1,0 +1,188 @@
+name: Build macOS Runtime
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*", "runtime-macos-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-macos-runtime-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUNDLE_NAME: style-bert-vits2-ggml-runtime-macos-arm64
+
+jobs:
+  macos-runtime:
+    name: Build macOS arm64 runtime
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Print tool versions
+        run: |
+          python3 --version
+          uv --version
+          cmake --version
+          xcodebuild -version
+
+      - name: Build runtime bundle
+        run: |
+          ./build.sh \
+            --build-dir "$RUNNER_TEMP/build" \
+            --download-dir "$RUNNER_TEMP/download"
+
+      - name: Validate runtime bundle
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          bundle = Path("dist") / os.environ["BUNDLE_NAME"]
+          manifest_path = bundle / "manifest.json"
+          required_files = [
+              "manifest.json",
+              "lib/libtts.dylib",
+              "lib/libggml.dylib",
+              "lib/libggml-base.dylib",
+              "lib/libggml-cpu.dylib",
+              "lib/libggml-metal.dylib",
+              "onnxruntime_ep_style_bert_vits2_ggml/lib/libstyle_bert_vits2_ggml_onnx_ep.dylib",
+          ]
+
+          for relative_path in required_files:
+              path = bundle / relative_path
+              if not path.is_file():
+                  raise SystemExit(f"required runtime file was not found: {path}")
+
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          if manifest.get("bundle_tag") != "macos-arm64":
+              raise SystemExit(f"unexpected bundle_tag: {manifest.get('bundle_tag')}")
+          if manifest.get("provider_name") != "StyleBertVits2GgmlExecutionProvider":
+              raise SystemExit(f"unexpected provider_name: {manifest.get('provider_name')}")
+
+          manifest_libraries = manifest.get("libraries", [])
+          if not manifest_libraries:
+              raise SystemExit("manifest has no library entries")
+
+          for library in manifest_libraries:
+              relative_path = library["path"]
+              path = bundle / relative_path
+              if not path.is_file():
+                  raise SystemExit(f"manifest library was not found: {path}")
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              if digest != library["sha256"]:
+                  raise SystemExit(f"sha256 mismatch for {relative_path}")
+              if path.stat().st_size != library["size"]:
+                  raise SystemExit(f"size mismatch for {relative_path}")
+
+          print(f"validated {bundle}")
+          PY
+
+      - name: Inspect dylib dependencies
+        run: |
+          otool -L "dist/$BUNDLE_NAME/lib/libtts.dylib"
+          otool -L "dist/$BUNDLE_NAME/lib/libggml-metal.dylib"
+          otool -L "dist/$BUNDLE_NAME/onnxruntime_ep_style_bert_vits2_ggml/lib/libstyle_bert_vits2_ggml_onnx_ep.dylib"
+
+      - name: Package runtime bundle
+        id: package
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            asset_tag="$GITHUB_REF_NAME"
+          else
+            asset_tag="${GITHUB_SHA:0:12}"
+          fi
+          safe_tag="${asset_tag//\//-}"
+          asset="$BUNDLE_NAME-$safe_tag.tar.gz"
+          checksum="$asset.sha256"
+
+          COPYFILE_DISABLE=1 tar -czf "$asset" -C dist "$BUNDLE_NAME"
+          shasum -a 256 "$asset" > "$checksum"
+
+          python3 - <<'PY' > release-notes.md
+          import json
+          import os
+          from pathlib import Path
+
+          bundle = Path("dist") / os.environ["BUNDLE_NAME"]
+          manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+          print("macOS arm64 runtime bundle for Style-Bert-VITS2 GGML ONNX Runtime Plugin EP.")
+          print()
+          print(f"- Bundle: `{os.environ['BUNDLE_NAME']}`")
+          print(f"- Provider: `{manifest['provider_name']}`")
+          print(f"- ONNX Runtime: `{manifest['ort_version']}`")
+          print(f"- TTS.cpp: `{manifest['tts_cpp_ref']}`")
+          print(f"- ggml: `{manifest['ggml_repo']}`")
+          print()
+          print("The archive includes `manifest.json`, TTS.cpp runtime libraries, ggml Metal libraries, and the ONNX Runtime Plugin EP dylib.")
+          PY
+
+          {
+            echo "asset=$asset"
+            echo "checksum=$checksum"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BUNDLE_NAME }}
+          path: |
+            ${{ steps.package.outputs.asset }}
+            ${{ steps.package.outputs.checksum }}
+            release-notes.md
+          retention-days: 14
+
+  release:
+    name: Publish runtime release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: macos-runtime
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download runtime artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BUNDLE_NAME }}
+          path: release-assets
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          asset="$(find release-assets -maxdepth 1 -name '*.tar.gz' -print -quit)"
+          checksum="$(find release-assets -maxdepth 1 -name '*.tar.gz.sha256' -print -quit)"
+          notes="release-assets/release-notes.md"
+
+          if [[ -z "$asset" || -z "$checksum" ]]; then
+            echo "release artifact was not found" >&2
+            exit 1
+          fi
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "$asset" "$checksum" --clobber
+          else
+            gh release create "$RELEASE_TAG" \
+              "$asset" \
+              "$checksum" \
+              --verify-tag \
+              --title "$RELEASE_TAG" \
+              --notes-file "$notes" \
+              --prerelease || \
+            gh release upload "$RELEASE_TAG" "$asset" "$checksum" --clobber
+          fi
