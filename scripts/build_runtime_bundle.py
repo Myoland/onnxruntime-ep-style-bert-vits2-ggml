@@ -19,7 +19,7 @@ from pathlib import Path, PurePosixPath
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_TTS_CPP_REPO = "https://github.com/Myoland/TTS.cpp.git"
-DEFAULT_TTS_CPP_REF = "94792ed2599656618c1d5eb3934754c391eb2a54"
+DEFAULT_TTS_CPP_REF = "7daeaea2d3a2027612e6c71988f589d4ca3dac46"
 DEFAULT_GGML_REPO = "https://github.com/Myoland/ggml.git"
 
 

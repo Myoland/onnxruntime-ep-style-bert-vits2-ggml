@@ -188,8 +188,21 @@ symbol、graph、runtime cache を過度に温めるためです。
 | device | backend | synthesis GGUF | JP-BERT GGUF | short RTF | medium RTF | long RTF |
 | --- | --- | --- | --- | ---: | ---: | ---: |
 | Linux RTX 3060 | GGML Vulkan | FP32 | F16 `linear` | `0.130` | `0.094` | `0.063` |
+| Linux AMD Radeon 780M | GGML Vulkan | FP32 | F16 `linear` | `0.234` | `0.181` | `0.143` |
 | Windows Arc B580 | GGML Vulkan | FP32 | F16 `linear` | `0.108` | `0.091` | `0.056` |
 | macOS M1 Pro | GGML Metal | FP32 | F16 `linear` | `0.178` | `0.142` | `0.135` |
+
+2026-07-05 に Linux AMD Radeon 780M / GGML Vulkan で再測定した三つの標準文の
+RTF は次の通りです。Engine checkout は `feat/onnx-ggml-minimal-upstream`、
+runtime bundle は `style-bert-vits2-ggml-runtime-linux-x64`、warmup `1` 回、
+測定 `3` 回です。
+
+| label | text | ONNX CPU RTF | GGML Vulkan RTF | WAV preview |
+| --- | --- | ---: | ---: | --- |
+| short | `テストです。` | `0.602` | `0.234` | [ONNX CPU](res/benchmark-audio/20260705-linux-radeon-780m/onnx-cpu-short.wav) / [GGML Vulkan](res/benchmark-audio/20260705-linux-radeon-780m/onnx-ggml-vulkan-short.wav) |
+| medium | `今日はいい天気ですね。` | `0.420` | `0.181` | [ONNX CPU](res/benchmark-audio/20260705-linux-radeon-780m/onnx-cpu-medium.wav) / [GGML Vulkan](res/benchmark-audio/20260705-linux-radeon-780m/onnx-ggml-vulkan-medium.wav) |
+| long | `これは少し長めの文章です。GPUバックエンドの推論速度と音声品質を確認しています。` | `0.314` | `0.143` | [ONNX CPU](res/benchmark-audio/20260705-linux-radeon-780m/onnx-cpu-long.wav) / [GGML Vulkan](res/benchmark-audio/20260705-linux-radeon-780m/onnx-ggml-vulkan-long.wav) |
+| average | - | `0.445` | `0.186` | - |
 
 2026-07-05 に macOS M1 Pro / GGML Metal で再測定した三つの標準文の RTF は
 次の通りです。Engine checkout は `feat/onnx-ggml-minimal-upstream`、
@@ -241,8 +254,8 @@ Windows Arc B580:
 Linux RTX 3060 / AMD Radeon 780M / Windows Arc B580 / macOS M1 Pro で
 Plugin EP 経路の実行を確認しています。過去の横断測定では、GGML Vulkan は
 Windows Arc B580 と Linux RTX 3060 の short / medium / long 全てで ONNX CPU
-より高速でした。AMD 780M iGPU でも Linux Vulkan バックエンドが実時間未満で動作し、
-short `0.163`, medium `0.135`, long `0.108` RTF を記録しました。
+より高速でした。AMD 780M iGPU でも Linux Vulkan バックエンドが実時間未満で
+動作することを確認しています。
 
 ## PR に貼る benchmark 章の推奨形
 

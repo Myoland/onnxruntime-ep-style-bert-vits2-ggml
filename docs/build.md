@@ -53,7 +53,7 @@ Useful options:
 ```bash
 ./build.sh --output-dir dist/style-bert-vits2-ggml-runtime-custom
 ./build.sh --ort-version 1.26.0
-./build.sh --tts-cpp-ref 94792ed2599656618c1d5eb3934754c391eb2a54
+./build.sh --tts-cpp-ref <tts-cpp-commit-or-tag>
 ./build.sh --build-dir build
 ./build.sh --download-dir download
 ```
