@@ -12,6 +12,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.build_runtime_bundle import (  # noqa: E402
+    PlatformConfig,
+    _build_tts_cpp,
     _extract_archive,
     _resolve_git_ref,
     _source_refs_from_existing_tree,
@@ -99,3 +101,32 @@ def test_extract_archive_keeps_direct_tar_layout_with_dot_prefix(
         output_dir / "include/onnxruntime/core/session/onnxruntime_cxx_api.h"
     ).read_bytes() == b"h"
     assert not (output_dir / "lib").exists()
+
+
+def test_build_tts_cpp_disables_native_cpu_flags(
+    tmp_path: Path, monkeypatch
+) -> None:
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str], *, cwd: Path | None = None) -> None:
+        commands.append(command)
+
+    monkeypatch.setattr("scripts.build_runtime_bundle._run", fake_run)
+    config = PlatformConfig(
+        bundle_tag="test-x64",
+        ort_version="1.0.0",
+        ort_archive="onnxruntime-test-{version}.zip",
+        tts_library_names=("tts.dll",),
+        ggml_patterns=("ggml*.dll",),
+        tts_cmake_options=("-DGGML_VULKAN=ON",),
+    )
+
+    _build_tts_cpp(
+        source_dir=tmp_path / "TTS.cpp",
+        build_dir=tmp_path / "TTS.cpp-build",
+        config=config,
+    )
+
+    configure_command = commands[0]
+    assert "-DGGML_NATIVE=OFF" in configure_command
+    assert "-DGGML_VULKAN=ON" in configure_command

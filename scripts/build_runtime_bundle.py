@@ -274,6 +274,7 @@ def _build_tts_cpp(
         "-DCMAKE_BUILD_TYPE=Release",
         "-DBUILD_SHARED_LIBS=ON",
         "-DTTS_BUILD_EXAMPLES=OFF",
+        "-DGGML_NATIVE=OFF",
         "-DCMAKE_BUILD_RPATH_USE_ORIGIN=ON",
         "-DCMAKE_BUILD_RPATH=$ORIGIN",
         "-DCMAKE_INSTALL_RPATH=$ORIGIN",

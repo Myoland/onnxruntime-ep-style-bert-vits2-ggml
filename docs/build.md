@@ -84,6 +84,10 @@ runtime regression を早期に検出する方針です。
 と ggml submodule commit が記録されます。過去の bundle を厳密に再現したい
 場合は、manifest の `tts_cpp_ref` を `--tts-cpp-ref` に渡してください。
 
+Runtime bundles configure TTS.cpp/ggml with `GGML_NATIVE=OFF`. This keeps CI
+artifacts portable across x64 machines instead of baking the GitHub Actions
+runner CPU instruction set into redistributed DLLs.
+
 The Plugin EP itself is configured through `CMakePresets.json`. The Python script
 uses the release preset by default and only falls back to explicit `cmake -S/-B`
 arguments when a custom `--build-dir` is requested.
