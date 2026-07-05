@@ -68,7 +68,13 @@ def _platform_config() -> PlatformConfig:
             ort_archive="onnxruntime-osx-arm64-{version}.tgz",
             tts_library_names=("libtts.dylib",),
             ggml_patterns=("libggml*.dylib",),
-            tts_cmake_options=("-DGGML_METAL=ON", "-DGGML_METAL_EMBED_LIBRARY=ON"),
+            # Avoid CI runner-dependent GGML_NATIVE detection dropping FP16 vector paths.
+            tts_cmake_options=(
+                "-DGGML_METAL=ON",
+                "-DGGML_METAL_EMBED_LIBRARY=ON",
+                "-DGGML_NATIVE=OFF",
+                "-DGGML_CPU_ARM_ARCH=armv8.2-a+fp16+dotprod",
+            ),
         )
     if system == "Windows" and machine in {"amd64", "x86_64"}:
         return PlatformConfig(
