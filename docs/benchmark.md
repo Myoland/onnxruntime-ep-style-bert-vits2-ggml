@@ -187,10 +187,22 @@ symbol、graph、runtime cache を過度に温めるためです。
 
 | device | backend | synthesis GGUF | JP-BERT GGUF | short RTF | medium RTF | long RTF |
 | --- | --- | --- | --- | ---: | ---: | ---: |
-| Linux RTX 3060 | GGML Vulkan | FP32 | F16 `linear` | `0.130` | `0.094` | `0.063` |
+| Linux RTX 3060 | GGML Vulkan | FP32 | F16 `linear` | `0.101` | `0.071` | `0.047` |
 | Linux AMD Radeon 780M | GGML Vulkan | FP32 | F16 `linear` | `0.234` | `0.181` | `0.143` |
 | Windows Arc B580 | GGML Vulkan | FP32 | F16 `linear` | `0.108` | `0.091` | `0.056` |
 | macOS M1 Pro | GGML Metal | FP32 | F16 `linear` | `0.178` | `0.142` | `0.135` |
+
+2026-07-05 に Linux RTX 3060 / GGML Vulkan で再測定した三つの標準文の RTF は
+次の通りです。Engine checkout は `feat/onnx-ggml-minimal-upstream`、
+runtime bundle は `style-bert-vits2-ggml-runtime-linux-x64`、warmup `1` 回、
+測定 `3` 回です。
+
+| label | text | ONNX CPU RTF | GGML Vulkan RTF | WAV preview |
+| --- | --- | ---: | ---: | --- |
+| short | `テストです。` | `0.488` | `0.101` | [ONNX CPU](res/benchmark-audio/20260705-linux-rtx-3060/onnx-cpu-short.wav) / [GGML Vulkan](res/benchmark-audio/20260705-linux-rtx-3060/onnx-ggml-vulkan-short.wav) |
+| medium | `今日はいい天気ですね。` | `0.485` | `0.071` | [ONNX CPU](res/benchmark-audio/20260705-linux-rtx-3060/onnx-cpu-medium.wav) / [GGML Vulkan](res/benchmark-audio/20260705-linux-rtx-3060/onnx-ggml-vulkan-medium.wav) |
+| long | `これは少し長めの文章です。GPUバックエンドの推論速度と音声品質を確認しています。` | `0.316` | `0.047` | [ONNX CPU](res/benchmark-audio/20260705-linux-rtx-3060/onnx-cpu-long.wav) / [GGML Vulkan](res/benchmark-audio/20260705-linux-rtx-3060/onnx-ggml-vulkan-long.wav) |
+| average | - | `0.430` | `0.073` | - |
 
 2026-07-05 に Linux AMD Radeon 780M / GGML Vulkan で再測定した三つの標準文の
 RTF は次の通りです。Engine checkout は `feat/onnx-ggml-minimal-upstream`、
