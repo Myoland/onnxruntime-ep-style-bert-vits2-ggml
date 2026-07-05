@@ -76,6 +76,14 @@ Useful options:
 ./build.sh --download-dir download
 ```
 
+`--tts-cpp-ref` の既定値は `main` です。CI と release workflow は
+Myoland/TTS.cpp の最新状態を常に build し、upstream 側の build breakage や
+runtime regression を早期に検出する方針です。
+
+一方で、bundle の `manifest.json` には実際に checkout された TTS.cpp commit
+と ggml submodule commit が記録されます。過去の bundle を厳密に再現したい
+場合は、manifest の `tts_cpp_ref` を `--tts-cpp-ref` に渡してください。
+
 The Plugin EP itself is configured through `CMakePresets.json`. The Python script
 uses the release preset by default and only falls back to explicit `cmake -S/-B`
 arguments when a custom `--build-dir` is requested.
@@ -93,8 +101,9 @@ dist/style-bert-vits2-ggml-runtime-<platform>/
         └── libstyle_bert_vits2_ggml_onnx_ep.so / .dylib / .dll
 ```
 
-`manifest.json` records the ONNX Runtime version, TTS.cpp ref, ggml repository,
-runtime ABI version, GGUF schema version, and library checksums.
+`manifest.json` records the ONNX Runtime version, requested TTS.cpp ref, resolved
+TTS.cpp commit, resolved ggml submodule commit, ggml repository, runtime ABI
+version, GGUF schema version, and library checksums.
 
 ## Related workflows
 

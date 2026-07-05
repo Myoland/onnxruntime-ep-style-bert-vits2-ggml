@@ -19,7 +19,7 @@ from pathlib import Path, PurePosixPath
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_TTS_CPP_REPO = "https://github.com/Myoland/TTS.cpp.git"
-DEFAULT_TTS_CPP_REF = "7daeaea2d3a2027612e6c71988f589d4ca3dac46"
+DEFAULT_TTS_CPP_REF = "main"
 DEFAULT_GGML_REPO = "https://github.com/Myoland/ggml.git"
 
 
@@ -31,6 +31,13 @@ class PlatformConfig:
     tts_library_names: tuple[str, ...]
     ggml_patterns: tuple[str, ...]
     tts_cmake_options: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SourceRefs:
+    tts_cpp_requested_ref: str
+    tts_cpp_ref: str
+    ggml_ref: str | None
 
 
 def _platform_config() -> PlatformConfig:
@@ -78,6 +85,42 @@ def _platform_config() -> PlatformConfig:
 def _run(command: Sequence[str], *, cwd: Path | None = None) -> None:
     print("+ " + " ".join(command), flush=True)
     subprocess.run(command, cwd=cwd, check=True)
+
+
+def _run_output(command: Sequence[str], *, cwd: Path | None = None) -> str:
+    print("+ " + " ".join(command), flush=True)
+    return subprocess.check_output(command, cwd=cwd, text=True).strip()
+
+
+def _git_commit_or_none(source_dir: Path, ref: str) -> str | None:
+    result = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(source_dir),
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            f"{ref}^{{commit}}",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def _resolve_git_ref(source_dir: Path, ref: str) -> str:
+    remote_commit = _git_commit_or_none(source_dir, f"refs/remotes/origin/{ref}")
+    if remote_commit is not None:
+        return remote_commit
+    commit = _git_commit_or_none(source_dir, ref)
+    if commit is not None:
+        return commit
+    raise SystemExit(f"Could not resolve git ref {ref!r} in {source_dir}")
 
 
 def _plugin_ep_preset() -> str:
@@ -181,13 +224,36 @@ def _prepare_tts_cpp_source(
     repo: str,
     ref: str,
     ggml_repo: str,
-) -> None:
+) -> SourceRefs:
     if not source_dir.exists():
         _run(["git", "clone", repo, str(source_dir)])
-    _run(["git", "-C", str(source_dir), "fetch", "--tags", "origin"])
-    _run(["git", "-C", str(source_dir), "checkout", ref])
+    _run(["git", "-C", str(source_dir), "fetch", "--tags", "--prune", "origin"])
+    resolved_ref = _resolve_git_ref(source_dir, ref)
+    _run(["git", "-C", str(source_dir), "checkout", "--detach", resolved_ref])
     _run(["git", "-C", str(source_dir), "submodule", "set-url", "ggml", ggml_repo])
     _run(["git", "-C", str(source_dir), "submodule", "update", "--init", "--recursive"])
+    ggml_dir = source_dir / "ggml"
+    ggml_ref = (
+        _run_output(["git", "-C", str(ggml_dir), "rev-parse", "HEAD"])
+        if ggml_dir.exists()
+        else None
+    )
+    return SourceRefs(
+        tts_cpp_requested_ref=ref,
+        tts_cpp_ref=_run_output(["git", "-C", str(source_dir), "rev-parse", "HEAD"]),
+        ggml_ref=ggml_ref,
+    )
+
+
+def _source_refs_from_existing_tree(source_dir: Path, requested_ref: str) -> SourceRefs:
+    tts_cpp_ref = _git_commit_or_none(source_dir, "HEAD") or requested_ref
+    ggml_dir = source_dir / "ggml"
+    ggml_ref = _git_commit_or_none(ggml_dir, "HEAD") if ggml_dir.exists() else None
+    return SourceRefs(
+        tts_cpp_requested_ref=requested_ref,
+        tts_cpp_ref=tts_cpp_ref,
+        ggml_ref=ggml_ref,
+    )
 
 
 def _build_tts_cpp(
@@ -327,7 +393,7 @@ def _write_manifest(
     bundle_tag: str,
     ort_version: str,
     tts_cpp_repo: str,
-    tts_cpp_ref: str,
+    source_refs: SourceRefs,
     ggml_repo: str,
     plugin_libraries: Sequence[Path],
     tts_libraries: Sequence[Path],
@@ -341,8 +407,10 @@ def _write_manifest(
         "ort_version": ort_version,
         "ort_plugin_ep_api_version": 26,
         "tts_cpp_repo": tts_cpp_repo,
-        "tts_cpp_ref": tts_cpp_ref,
+        "tts_cpp_requested_ref": source_refs.tts_cpp_requested_ref,
+        "tts_cpp_ref": source_refs.tts_cpp_ref,
         "ggml_repo": ggml_repo,
+        "ggml_ref": source_refs.ggml_ref,
         "tts_cpp_runtime_abi_version": 1,
         "gguf_schema_version": 1,
         "libraries": [
@@ -367,7 +435,7 @@ def _build_bundle(
     config: PlatformConfig,
     ort_version: str,
     tts_cpp_repo: str,
-    tts_cpp_ref: str,
+    source_refs: SourceRefs,
     ggml_repo: str,
 ) -> None:
     if output_dir.exists():
@@ -403,7 +471,7 @@ def _build_bundle(
         bundle_tag=config.bundle_tag,
         ort_version=ort_version,
         tts_cpp_repo=tts_cpp_repo,
-        tts_cpp_ref=tts_cpp_ref,
+        source_refs=source_refs,
         ggml_repo=ggml_repo,
         plugin_libraries=plugin_libraries,
         tts_libraries=tts_libraries,
@@ -426,7 +494,14 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--ort-version", default=config.ort_version)
     parser.add_argument("--ort-include-dir", type=Path, default=None)
     parser.add_argument("--tts-cpp-repo", default=DEFAULT_TTS_CPP_REPO)
-    parser.add_argument("--tts-cpp-ref", default=DEFAULT_TTS_CPP_REF)
+    parser.add_argument(
+        "--tts-cpp-ref",
+        default=DEFAULT_TTS_CPP_REF,
+        help=(
+            "TTS.cpp ref to checkout. Defaults to main; manifest.json records "
+            "the resolved commit for exact reproduction."
+        ),
+    )
     parser.add_argument("--ggml-repo", default=DEFAULT_GGML_REPO)
     parser.add_argument("--tts-cpp-source-dir", type=Path, default=None)
     parser.add_argument("--tts-cpp-build-dir", type=Path, default=None)
@@ -477,7 +552,7 @@ def main() -> None:
         and args.build_dir.resolve() == (REPO_ROOT / "build").resolve(),
     )
     if not args.reuse_tts_cpp_build:
-        _prepare_tts_cpp_source(
+        source_refs = _prepare_tts_cpp_source(
             source_dir=tts_source_dir,
             repo=args.tts_cpp_repo,
             ref=args.tts_cpp_ref,
@@ -486,13 +561,15 @@ def main() -> None:
         _build_tts_cpp(
             source_dir=tts_source_dir, build_dir=tts_build_dir, config=config
         )
+    else:
+        source_refs = _source_refs_from_existing_tree(tts_source_dir, args.tts_cpp_ref)
     _build_bundle(
         output_dir=output_dir,
         tts_build_dir=tts_build_dir,
         config=config,
         ort_version=args.ort_version,
         tts_cpp_repo=args.tts_cpp_repo,
-        tts_cpp_ref=args.tts_cpp_ref,
+        source_refs=source_refs,
         ggml_repo=args.ggml_repo,
     )
     print(f"bundle: {output_dir}", flush=True)

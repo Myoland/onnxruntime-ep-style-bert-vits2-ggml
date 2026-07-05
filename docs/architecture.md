@@ -132,9 +132,10 @@ dist/style-bert-vits2-ggml-runtime-<platform>/
         └── libstyle_bert_vits2_ggml_onnx_ep.so / .dylib / .dll
 ```
 
-`manifest.json` には、ONNX Runtime version、TTS.cpp ref、ggml repository、runtime ABI、
-GGUF schema、library checksum を記録します。これは native bundle の出所を見えるようにし、
-reviewer や packager が runtime の内容を確認できるようにするためです。
+`manifest.json` には、ONNX Runtime version、要求された TTS.cpp ref、実際に
+checkout された TTS.cpp commit、ggml submodule commit、ggml repository、runtime
+ABI、GGUF schema、library checksum を記録します。これは native bundle の出所を
+見えるようにし、reviewer や packager が runtime の内容を確認できるようにするためです。
 
 ## メンテナンス方針
 

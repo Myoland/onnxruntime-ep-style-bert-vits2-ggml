@@ -73,6 +73,10 @@ jobs:
               raise SystemExit(f"unexpected bundle_tag: {manifest.get('bundle_tag')}")
           if manifest.get("provider_name") != "StyleBertVits2GgmlExecutionProvider":
               raise SystemExit(f"unexpected provider_name: {manifest.get('provider_name')}")
+          if len(manifest.get("tts_cpp_ref", "")) != 40:
+              raise SystemExit(f"manifest does not record a resolved TTS.cpp commit: {manifest.get('tts_cpp_ref')}")
+          if len(manifest.get("ggml_ref", "")) != 40:
+              raise SystemExit(f"manifest does not record a resolved ggml commit: {manifest.get('ggml_ref')}")
 
           manifest_libraries = manifest.get("libraries", [])
           if not manifest_libraries:
@@ -125,8 +129,8 @@ jobs:
           print(f"- Bundle: `{os.environ['BUNDLE_NAME']}`")
           print(f"- Provider: `{manifest['provider_name']}`")
           print(f"- ONNX Runtime: `{manifest['ort_version']}`")
-          print(f"- TTS.cpp: `{manifest['tts_cpp_ref']}`")
-          print(f"- ggml: `{manifest['ggml_repo']}`")
+          print(f"- TTS.cpp: `{manifest['tts_cpp_ref']}` (requested `{manifest.get('tts_cpp_requested_ref', manifest['tts_cpp_ref'])}`)")
+          print(f"- ggml: `{manifest['ggml_repo']}` @ `{manifest['ggml_ref']}`")
           print()
           print("The archive includes `manifest.json`, TTS.cpp runtime libraries, ggml Metal libraries, and the ONNX Runtime Plugin EP dylib.")
           PY
