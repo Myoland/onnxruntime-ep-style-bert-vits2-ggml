@@ -130,7 +130,7 @@ the Linux x64 runtime bundle.
 - Runner: `ubuntu-24.04`
 - Bundle: `dist/style-bert-vits2-ggml-runtime-linux-x64/`
 - Workflow artifact: `linux-runtime-bundle`
-- Release assets: `style-bert-vits2-ggml-runtime-linux-x64-<tag>.tar.gz` and
+- Assets: `style-bert-vits2-ggml-runtime-linux-x64-<tag>.tar.gz` and
   `.sha256`
 
 The Linux workflow intentionally keeps the runner on `ubuntu-24.04` so the
@@ -161,10 +161,9 @@ The built `libggml-vulkan.so` must also contain `NV_coopmat2`. This check
 prevents publishing a bundle that silently falls back to a slower Vulkan matrix
 core path on RTX 30-series hardware.
 
-Pull requests, pushes to `main`, and manual `workflow_dispatch` runs build,
-validate, package, and upload the runtime bundle as a short-lived workflow
-artifact. Push a tag matching `v*` or `runtime-linux-v*` to publish the tarball
-to the corresponding GitHub Release. Non-tag runs do not publish release assets.
+Only tag pushes build the Linux runtime bundle. Push a tag matching `v*` or
+`runtime-linux-v*` to build, validate, package, upload the short-lived workflow
+artifact, and publish the tarball to the corresponding GitHub Release.
 
 ## Windows x64 runtime workflow
 
@@ -174,14 +173,15 @@ the Windows x64 runtime bundle.
 - Workflow: `.github/workflows/windows-runtime.yml`
 - Runner: `windows-2022`
 - Bundle: `dist/style-bert-vits2-ggml-runtime-windows-x64/`
-- Assets: `style-bert-vits2-ggml-runtime-windows-x64-<tag-or-sha>.zip` and
+- Assets: `style-bert-vits2-ggml-runtime-windows-x64-<tag>.zip` and
   `.sha256`
 
 The workflow installs a pinned Vulkan SDK shader compiler, then calls the same
 local build entry point as developers: `.\build.ps1`. It validates
 `manifest.json`, required DLLs, library checksums, and Plugin EP exports before
-uploading the runtime bundle. Tags matching `v*` or `runtime-windows-v*` publish
-the zip to the corresponding GitHub Release.
+uploading the runtime bundle. Only tag pushes build the Windows runtime bundle.
+Push a tag matching `v*` or `runtime-windows-v*` to publish the zip to the
+corresponding GitHub Release.
 
 ## macOS arm64 release workflow
 
@@ -194,7 +194,7 @@ arm64 runtime bundle as a GitHub Release asset.
 - Assets: `style-bert-vits2-ggml-runtime-macos-arm64-<tag>.tar.gz` and
   `.sha256`
 
-Pull requests, pushes to `main`, and manual `workflow_dispatch` runs build and
-validate the runtime bundle. Push a tag matching `v*` or `runtime-macos-v*` to
-publish the tarball to the corresponding GitHub Release. The release workflow
-validates `manifest.json` and library checksums before publishing.
+Only tag pushes build and validate the macOS runtime bundle. Push a tag matching
+`v*` or `runtime-macos-v*` to publish the tarball to the corresponding GitHub
+Release. The release workflow validates `manifest.json` and library checksums
+before publishing.

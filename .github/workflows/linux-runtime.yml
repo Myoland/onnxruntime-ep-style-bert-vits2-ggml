@@ -1,14 +1,10 @@
 name: Build Linux Runtime Bundle
 
 on:
-  pull_request:
   push:
-    branches:
-      - main
     tags:
       - "v*"
       - "runtime-linux-v*"
-  workflow_dispatch:
 
 permissions:
   contents: read

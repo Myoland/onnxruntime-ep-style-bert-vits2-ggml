@@ -1,14 +1,10 @@
 name: Build Windows Runtime Bundle
 
 on:
-  pull_request:
   push:
-    branches:
-      - main
     tags:
       - "v*"
       - "runtime-windows-v*"
-  workflow_dispatch:
 
 permissions:
   contents: read

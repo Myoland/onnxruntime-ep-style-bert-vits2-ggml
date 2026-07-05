@@ -103,7 +103,7 @@ warmup `1` 回、測定 `3` 回で実行します。出力先は既定で
 `gguf-cache/` です。
 
 Linux で release / CI artifact の性能を確認する場合は、GitHub Actions から
-取得した `style-bert-vits2-ggml-runtime-linux-x64-<tag-or-sha>.tar.gz` を展開し、
+取得した `style-bert-vits2-ggml-runtime-linux-x64-<tag>.tar.gz` を展開し、
 展開後の `style-bert-vits2-ggml-runtime-linux-x64/` を `PLUGIN_BUNDLE_DIR` に
 指定します。RTX 3060 など NVIDIA cooperative matrix 対応環境では、
 `benchmark.log` に次のような provider 証跡が出ることを確認してください。
