@@ -64,12 +64,102 @@ dist/style-bert-vits2-ggml-runtime-linux-x64/
 
 詳細は [docs/build.md](docs/build.md) を参照してください。
 
-downstream engine の PyInstaller build では、生成された bundle を
-`STYLE_BERT_VITS2_GGML_BUNDLE_DIR` で渡します。
+## Usage
+
+This package is consumed by a downstream Style-Bert-VITS2 engine. It does not
+replace the engine entry point by itself. The engine imports this package only
+when GGML is explicitly selected.
+
+### 1. Get a runtime bundle
+
+Use a GitHub Release bundle that matches your platform:
+
+```text
+style-bert-vits2-ggml-runtime-linux-x64-<tag>.tar.gz
+style-bert-vits2-ggml-runtime-macos-arm64-<tag>.tar.gz
+style-bert-vits2-ggml-runtime-windows-x64-<tag>.zip
+```
+
+For local development, build the bundle yourself:
 
 ```bash
-export STYLE_BERT_VITS2_GGML_BUNDLE_DIR=/path/to/onnxruntime-ep-style-bert-vits2-ggml/dist/style-bert-vits2-ggml-runtime-linux-x64
-uv run --group build pyinstaller --noconfirm run.spec
+./build.sh
+```
+
+The extracted or locally built bundle should contain:
+
+```text
+style-bert-vits2-ggml-runtime-<platform>/
+├── manifest.json
+├── lib/
+│   ├── libtts.so / libtts.dylib / tts.dll
+│   └── libggml*
+└── onnxruntime_ep_style_bert_vits2_ggml/
+    └── lib/
+        └── libstyle_bert_vits2_ggml_onnx_ep.so / .dylib / .dll
+```
+
+### 2. Point the engine at the bundle
+
+When packaging or running the downstream engine, pass the bundle directory with
+`STYLE_BERT_VITS2_GGML_BUNDLE_DIR`.
+
+```bash
+export STYLE_BERT_VITS2_GGML_BUNDLE_DIR=/path/to/style-bert-vits2-ggml-runtime-linux-x64
+```
+
+For strict packaging checks, also set:
+
+```bash
+export STYLE_BERT_VITS2_GGML_REQUIRED=1
+```
+
+### 3. Enable GGML in the engine
+
+GGML is opt-in. Use the engine's GGML provider option:
+
+```bash
+uv run python run.py --onnx_provider ggml
+```
+
+Without `--onnx_provider ggml`, the engine keeps its existing ONNX Runtime
+provider behavior.
+
+### 4. Verify the runtime path
+
+Use the benchmark reproduction script from an engine checkout:
+
+```bash
+ENGINE_DIR=<AivisSpeech-Engine checkout>
+PLUGIN_REPO_DIR=<onnxruntime-ep-style-bert-vits2-ggml checkout>
+PLUGIN_BUNDLE_DIR=/path/to/style-bert-vits2-ggml-runtime-linux-x64
+
+cd "$ENGINE_DIR"
+uv run python "$PLUGIN_REPO_DIR/scripts/reproduce_onnx_ggml_benchmark.py" \
+  --engine-dir "$ENGINE_DIR" \
+  --ggml-native-library-path "$PLUGIN_BUNDLE_DIR/lib/libtts.so" \
+  --onnx-ep-library-path "$PLUGIN_BUNDLE_DIR/onnxruntime_ep_style_bert_vits2_ggml/lib/libstyle_bert_vits2_ggml_onnx_ep.so" \
+  --library-dir "$PLUGIN_BUNDLE_DIR/lib"
+```
+
+The output `summary.md` and `benchmark.log` should show
+`StyleBertVits2GgmlExecutionProvider` before `CPUExecutionProvider`.
+
+On Linux NVIDIA cooperative-matrix hardware, confirm that `benchmark.log` shows:
+
+```text
+matrix cores: NV_coopmat2
+```
+
+If multiple Vulkan devices are visible, pin the device explicitly. For example:
+
+```bash
+MESA_VK_DEVICE_SELECT=1002:1900! uv run python "$PLUGIN_REPO_DIR/scripts/reproduce_onnx_ggml_benchmark.py" \
+  --engine-dir "$ENGINE_DIR" \
+  --ggml-native-library-path "$PLUGIN_BUNDLE_DIR/lib/libtts.so" \
+  --onnx-ep-library-path "$PLUGIN_BUNDLE_DIR/onnxruntime_ep_style_bert_vits2_ggml/lib/libstyle_bert_vits2_ggml_onnx_ep.so" \
+  --library-dir "$PLUGIN_BUNDLE_DIR/lib" \
+  --ggml-vulkan-device 0
 ```
 
 ## Python helper
