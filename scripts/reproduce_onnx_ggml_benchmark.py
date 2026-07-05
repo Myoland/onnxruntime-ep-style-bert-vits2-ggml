@@ -35,6 +35,13 @@ from onnxruntime_ep_style_bert_vits2_ggml.models import (
 
 _BENCHMARK_RUNNER = _EP_REPO_ROOT / "scripts" / "benchmark_onnx_ggml_provider.py"
 
+
+def _default_vulkan_math_mode() -> str:
+    if platform.system() == "Windows":
+        return "f32"
+    return "coopmat"
+
+
 _DEFAULT_TEXTS = (
     "テストです。",
     "今日はいい天気ですね。",
@@ -171,7 +178,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ggml-vulkan-math-mode",
         choices=("f32", "coopmat", "fp16", "fp16-coopmat"),
-        default="coopmat",
+        default=_default_vulkan_math_mode(),
         help="Provider option controlling ggml-vulkan F16 and cooperative matrix use.",
     )
     parser.add_argument(

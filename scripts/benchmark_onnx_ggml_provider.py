@@ -58,6 +58,13 @@ from onnxruntime_ep_style_bert_vits2_ggml.runtime import (
     PluginExecutionProviderConfig as OnnxPluginExecutionProviderConfig,
 )
 
+
+def _default_vulkan_math_mode() -> str:
+    if sys.platform == "win32":
+        return "f32"
+    return "coopmat"
+
+
 _DEFAULT_TEXTS = (
     "テストです。",
     "今日はいい天気ですね。",
@@ -275,13 +282,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--ggml_vulkan_precision",
         choices=("accurate", "fast"),
-        default="accurate",
+        default="fast",
         help="Provider option precision for Vulkan.",
     )
     parser.add_argument(
         "--ggml_vulkan_math_mode",
         choices=("f32", "coopmat", "fp16", "fp16-coopmat"),
-        default="coopmat",
+        default=_default_vulkan_math_mode(),
         help=(
             "Provider option controlling ggml-vulkan F16 and cooperative matrix use."
         ),
