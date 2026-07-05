@@ -29,6 +29,11 @@ Linux / macOS:
 ./build.sh
 ```
 
+配布・レビュー用の runtime bundle は GitHub Actions でも build します。Linux x64 は
+`ubuntu-24.04` の binary baseline を保ちながら pinned Vulkan SDK headers /
+shader compiler を使い、macOS arm64 は `macos-26` で build します。詳細は
+[docs/build.md](docs/build.md) を参照してください。
+
 Windows PowerShell:
 
 ```powershell

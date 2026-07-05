@@ -36,6 +36,12 @@ dist/style-bert-vits2-ggml-runtime-macos-arm64/
 dist/style-bert-vits2-ggml-runtime-windows-x64/
 ```
 
+Local Linux builds use the Vulkan headers, loader, shader compiler, and CMake
+discovery paths available on the host. For release-quality Linux artifacts, use
+the GitHub Actions workflow described below or provide an equivalent current
+Vulkan SDK locally. Older distro Vulkan headers or shader compilers can build a
+valid bundle but may miss fast Vulkan paths such as NVIDIA `NV_coopmat2`.
+
 ## Reuse an existing TTS.cpp build
 
 ```bash
@@ -114,6 +120,51 @@ version, GGUF schema version, and library checksums.
 - [Downstream Engine integration](engine-integration.md)
 - [Benchmark reproduction](benchmark.md)
 - [JP-BERT GGUF quantization](jp-bert-gguf-quantization.md)
+
+## Linux x64 runtime workflow
+
+The repository includes a GitHub Actions workflow for building and publishing
+the Linux x64 runtime bundle.
+
+- Workflow: `.github/workflows/linux-runtime.yml`
+- Runner: `ubuntu-24.04`
+- Bundle: `dist/style-bert-vits2-ggml-runtime-linux-x64/`
+- Workflow artifact: `linux-runtime-bundle`
+- Release assets: `style-bert-vits2-ggml-runtime-linux-x64-<tag>.tar.gz` and
+  `.sha256`
+
+The Linux workflow intentionally keeps the runner on `ubuntu-24.04` so the
+published binary keeps a conservative glibc/libstdc++ baseline. To avoid being
+limited by the distro Vulkan toolchain, the workflow downloads a pinned LunarG
+Vulkan SDK and uses its headers plus shader compiler during the build.
+
+Current Linux CI Vulkan SDK pin:
+
+```text
+VULKAN_SDK_VERSION=1.4.350.1
+VULKAN_SDK_SHA256=6cce33c7e5383814150c5041820769d93c65a1fd883002e5949b067045a07daa
+```
+
+The workflow extracts only the pieces needed by the build: `glslc`,
+`glslangValidator`, `glslang`, Vulkan headers, and `libshaderc_shared.so.1`.
+It then sets `VULKAN_SDK`, prepends the SDK to `CMAKE_PREFIX_PATH`, and adds the
+SDK shader compiler to `PATH`.
+
+Linux CI treats Vulkan feature coverage as part of the artifact contract. The
+build must show shader compiler support for:
+
+- `GL_NV_cooperative_matrix2`
+- `GL_EXT_integer_dot_product`
+- `GL_EXT_bfloat16`
+
+The built `libggml-vulkan.so` must also contain `NV_coopmat2`. This check
+prevents publishing a bundle that silently falls back to a slower Vulkan matrix
+core path on RTX 30-series hardware.
+
+Pull requests, pushes to `main`, and manual `workflow_dispatch` runs build,
+validate, package, and upload the runtime bundle as a short-lived workflow
+artifact. Push a tag matching `v*` or `runtime-linux-v*` to publish the tarball
+to the corresponding GitHub Release. Non-tag runs do not publish release assets.
 
 ## Windows x64 runtime workflow
 

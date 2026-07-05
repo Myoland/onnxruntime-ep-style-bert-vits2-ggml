@@ -36,7 +36,8 @@
 - raw benchmark artifact や GGUF cache を Engine repository に追加すること。
 - 汎用 ONNX-to-GGML compiler を作ること。
 - Android / mobile integration を含めること。
-- binary distribution の最終方式をこの段階で決めること。
+- 長期的な binary distribution、support window、versioning policy の最終形を
+  この段階で固定すること。
 
 この backend は、すぐに Engine の配布方針を変えるものではなく、まず optional runtime
 として検証できる形を目指しています。
@@ -111,8 +112,9 @@ benchmark では、少なくとも次の情報を明示します。
 - WAV preview
 
 現在の benchmark document では、AivisHub の `まお` model を使い、三つの標準文を固定
-しています。macOS M1 Pro では ONNX CPU と GGML Metal の RTF を併記し、WAV preview
-も提供しています。
+しています。Linux RTX 3060 / AMD Radeon 780M / Windows Arc B580 / macOS M1 Pro の
+代表値を載せ、ONNX CPU と GGML backend の RTF、provider evidence、WAV preview を
+確認できる形にしています。
 
 この方針により、「特定環境で高速だった」という抽象的な主張ではなく、reviewer が
 model、text、provider evidence、音声出力を個別に確認できる形にします。
@@ -146,10 +148,14 @@ ABI、GGUF schema、library checksum を記録します。これは native bundl
 
 - Engine は optional integration だけを持つ。
 - native runtime はこの repository で独立して更新する。
+- Linux x64 と macOS arm64 は、この repository の GitHub Actions で runtime
+  bundle を build / validate し、tag push 時に GitHub Release asset として公開する。
+- Linux release build は `ubuntu-24.04` の binary baseline を維持しつつ、pinned
+  LunarG Vulkan SDK headers / shader compiler を使って新しい Vulkan feature path を
+  build する。
 - benchmark result は runtime の更新に合わせて更新する。
 - build / package の複雑性は runtime bundle に閉じ込める。
-- 正式配布に進む場合は、bundle hosting、version pinning、CI build、release policy を
-  別途議論する。
+- 正式配布に進む場合は、support window、version pinning、release cadence を別途議論する。
 
 そのため、現在の設計は、upstream に native runtime 全体の即時メンテナンス責任を
 求めるものではありません。まず Draft / experimental backend として評価しやすい
@@ -178,7 +184,7 @@ AMD / Intel GPU、または CUDA runtime を導入したくない環境で価値
 正式な配布経路に進めるかどうかは、今後の次の観点で判断します。
 
 - benchmark がより多くの実機環境で安定して既存経路より有利か。
-- native bundle の配布と version pinning が十分に単純か。
+- native bundle の配布、version pinning、release cadence が十分に単純か。
 - GGUF cache のディスク使用量と初回変換コストが許容できるか。
 - upstream が thin integration だけを持ち、native runtime の複雑性を独立 repository に
   残す形を受け入れられるか。

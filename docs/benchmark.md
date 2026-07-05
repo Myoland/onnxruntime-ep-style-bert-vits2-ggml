@@ -102,6 +102,22 @@ warmup `1` 回、測定 `3` 回で実行します。出力先は既定で
 `benchmark-artifacts/onnx-ggml-<timestamp>/`、GGUF cache はその中の
 `gguf-cache/` です。
 
+Linux で release / CI artifact の性能を確認する場合は、GitHub Actions から
+取得した `style-bert-vits2-ggml-runtime-linux-x64-<tag-or-sha>.tar.gz` を展開し、
+展開後の `style-bert-vits2-ggml-runtime-linux-x64/` を `PLUGIN_BUNDLE_DIR` に
+指定します。RTX 3060 など NVIDIA cooperative matrix 対応環境では、
+`benchmark.log` に次のような provider 証跡が出ることを確認してください。
+
+```text
+matrix cores: NV_coopmat2
+```
+
+`matrix cores: KHR_coopmat` になった場合、実行自体は GGML Vulkan でも、release
+artifact と同じ高速経路ではない可能性があります。Linux CI はこれを避けるため、
+`ubuntu-24.04` 上で pinned LunarG Vulkan SDK headers / shader compiler を使い、
+build log の shader extension support と `libggml-vulkan.so` 内の `NV_coopmat2`
+文字列を検証しています。
+
 複数の Vulkan device がある Linux 環境だけ、driver 側で見せる device を固定して
 Engine 側の device id を渡します。AMD Radeon 780M を使う例:
 
@@ -195,7 +211,8 @@ symbol、graph、runtime cache を過度に温めるためです。
 2026-07-05 に Linux RTX 3060 / GGML Vulkan で再測定した三つの標準文の RTF は
 次の通りです。Engine checkout は `feat/onnx-ggml-minimal-upstream`、
 runtime bundle は `style-bert-vits2-ggml-runtime-linux-x64`、warmup `1` 回、
-測定 `3` 回です。
+測定 `3` 回です。この結果は Linux CI で build した runtime bundle でも再確認し、
+`benchmark.log` で `matrix cores: NV_coopmat2` を確認しています。
 
 | label | text | ONNX CPU RTF | GGML Vulkan RTF | WAV preview |
 | --- | --- | ---: | ---: | --- |
