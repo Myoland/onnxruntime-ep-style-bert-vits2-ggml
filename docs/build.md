@@ -111,6 +111,23 @@ version, GGUF schema version, and library checksums.
 - [Benchmark reproduction](benchmark.md)
 - [JP-BERT GGUF quantization](jp-bert-gguf-quantization.md)
 
+## Windows x64 runtime workflow
+
+The repository includes a GitHub Actions workflow for building and validating
+the Windows x64 runtime bundle.
+
+- Workflow: `.github/workflows/windows-runtime.yml`
+- Runner: `windows-2022`
+- Bundle: `dist/style-bert-vits2-ggml-runtime-windows-x64/`
+- Assets: `style-bert-vits2-ggml-runtime-windows-x64-<tag-or-sha>.zip` and
+  `.sha256`
+
+The workflow installs a pinned Vulkan SDK shader compiler, then calls the same
+local build entry point as developers: `.\build.ps1`. It validates
+`manifest.json`, required DLLs, library checksums, and Plugin EP exports before
+uploading the runtime bundle. Tags matching `v*` or `runtime-windows-v*` publish
+the zip to the corresponding GitHub Release.
+
 ## macOS arm64 release workflow
 
 The repository includes a GitHub Actions workflow for publishing the macOS

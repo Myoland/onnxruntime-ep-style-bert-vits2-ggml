@@ -1,0 +1,223 @@
+name: Build Windows Runtime Bundle
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+      - "runtime-windows-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUNDLE_NAME: style-bert-vits2-ggml-runtime-windows-x64
+  CMAKE_BUILD_PARALLEL_LEVEL: "2"
+  VULKAN_SDK_VERSION: "1.4.350.0"
+  VULKAN_SDK_SHA256: "855b27ba05d2d8119c5114c5d4ff870ca38f2c632b11e1bb9923b9b7e6ecfe7b"
+
+jobs:
+  build-windows:
+    name: Build Windows x64 bundle
+    runs-on: windows-2022
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+
+      - name: Install Vulkan SDK shader compiler
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ProgressPreference = "SilentlyContinue"
+          $installer = Join-Path $env:RUNNER_TEMP "vulkansdk-windows-X64-$env:VULKAN_SDK_VERSION.exe"
+          $sdkRoot = Join-Path $env:RUNNER_TEMP "VulkanSDK\$env:VULKAN_SDK_VERSION"
+          $url = "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/vulkansdk-windows-X64-$env:VULKAN_SDK_VERSION.exe"
+
+          Invoke-WebRequest -Uri $url -OutFile $installer
+          $actualHash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $env:VULKAN_SDK_SHA256) {
+            throw "Vulkan SDK checksum mismatch: expected $env:VULKAN_SDK_SHA256, got $actualHash"
+          }
+
+          & $installer --root $sdkRoot --accept-licenses --accept-messages --confirm-command install copy_only=1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Vulkan SDK installer failed with exit code $LASTEXITCODE"
+          }
+
+          "VULKAN_SDK=$sdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "VK_SDK_PATH=$sdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "$sdkRoot\Bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          "$sdkRoot\Tools" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+          & "$sdkRoot\Bin\glslc.exe" --version
+
+      - name: Print tool versions
+        run: |
+          python --version
+          uv --version
+          cmake --version
+          glslc --version
+
+      - name: Build runtime bundle
+        run: |
+          .\build.ps1 `
+            --build-dir "$env:RUNNER_TEMP\build" `
+            --download-dir "$env:RUNNER_TEMP\download"
+
+      - name: Validate runtime bundle
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bundle = Join-Path "dist" $env:BUNDLE_NAME
+          $manifestPath = Join-Path $bundle "manifest.json"
+          $requiredFiles = @(
+            "manifest.json",
+            "lib\tts.dll",
+            "lib\ggml.dll",
+            "lib\ggml-base.dll",
+            "lib\ggml-cpu.dll",
+            "lib\ggml-vulkan.dll",
+            "onnxruntime_ep_style_bert_vits2_ggml\lib\style_bert_vits2_ggml_onnx_ep.dll"
+          )
+
+          foreach ($relativePath in $requiredFiles) {
+            $path = Join-Path $bundle $relativePath
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "required runtime file was not found: $path"
+            }
+          }
+
+          $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+          if ($manifest.bundle_tag -ne "windows-x64") {
+            throw "unexpected bundle_tag: $($manifest.bundle_tag)"
+          }
+          if ($manifest.provider_name -ne "StyleBertVits2GgmlExecutionProvider") {
+            throw "unexpected provider_name: $($manifest.provider_name)"
+          }
+          if ([string]::IsNullOrWhiteSpace($manifest.tts_cpp_ref) -or $manifest.tts_cpp_ref.Length -ne 40) {
+            throw "manifest does not record a resolved TTS.cpp commit: $($manifest.tts_cpp_ref)"
+          }
+          if ([string]::IsNullOrWhiteSpace($manifest.ggml_ref) -or $manifest.ggml_ref.Length -ne 40) {
+            throw "manifest does not record a resolved ggml commit: $($manifest.ggml_ref)"
+          }
+          if (-not $manifest.libraries -or $manifest.libraries.Count -eq 0) {
+            throw "manifest has no library entries"
+          }
+
+          foreach ($library in $manifest.libraries) {
+            $path = Join-Path $bundle $library.path
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "manifest library was not found: $path"
+            }
+            $actualHash = (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actualHash -ne $library.sha256) {
+              throw "sha256 mismatch for $($library.path)"
+            }
+            $actualSize = (Get-Item -LiteralPath $path).Length
+            if ($actualSize -ne $library.size) {
+              throw "size mismatch for $($library.path)"
+            }
+          }
+
+          Write-Host "validated $bundle"
+
+      - name: Inspect Plugin EP exports
+        run: |
+          $ErrorActionPreference = "Stop"
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ([string]::IsNullOrWhiteSpace($vsPath)) {
+            throw "Visual Studio with MSVC tools was not found"
+          }
+          $dumpbin = Get-ChildItem -Path (Join-Path $vsPath "VC\Tools\MSVC") -Recurse -Filter dumpbin.exe |
+            Where-Object { $_.FullName -like "*\Hostx64\x64\dumpbin.exe" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if ($null -eq $dumpbin) {
+            throw "dumpbin.exe was not found"
+          }
+
+          $plugin = "dist\$env:BUNDLE_NAME\onnxruntime_ep_style_bert_vits2_ggml\lib\style_bert_vits2_ggml_onnx_ep.dll"
+          $exports = & $dumpbin.FullName /exports $plugin
+          if (-not ($exports | Select-String -SimpleMatch "CreateEpFactories")) {
+            throw "CreateEpFactories export was not found"
+          }
+          if (-not ($exports | Select-String -SimpleMatch "ReleaseEpFactory")) {
+            throw "ReleaseEpFactory export was not found"
+          }
+
+      - name: Package runtime bundle
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            $version = $env:GITHUB_REF_NAME
+          } else {
+            $version = $env:GITHUB_SHA.Substring(0, 12)
+          }
+          $safeVersion = $version -replace '[\\/]', '-'
+          $archive = "$env:BUNDLE_NAME-$safeVersion.zip"
+          $archivePath = Join-Path "release" $archive
+
+          Compress-Archive -Path "dist\$env:BUNDLE_NAME" -DestinationPath $archivePath -Force
+          $hash = (Get-FileHash $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $archive" | Out-File -FilePath "$archivePath.sha256" -Encoding ascii
+          Get-ChildItem release | Format-Table Name, Length
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-runtime-bundle
+          path: release/*
+          if-no-files-found: error
+          retention-days: 5
+
+  release-windows:
+    name: Publish Windows release asset
+    runs-on: ubuntu-24.04
+    needs: build-windows
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download runtime bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-runtime-bundle
+          path: release
+
+      - name: Publish release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          ls -lh release
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            gh release upload "${TAG_NAME}" release/* --clobber
+          else
+            gh release create "${TAG_NAME}" release/* \
+              --title "${TAG_NAME}" \
+              --notes "Windows x64 runtime bundle."
+          fi
