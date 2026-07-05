@@ -15,6 +15,7 @@ import し、`StyleBertVits2GgmlExecutionProvider` をフォールバック Prov
 
 ## Documents
 
+- [Architecture and design policy](docs/architecture.md)
 - [Build](docs/build.md)
 - [Downstream Engine integration](docs/engine-integration.md)
 - [Benchmark reproduction](docs/benchmark.md)
