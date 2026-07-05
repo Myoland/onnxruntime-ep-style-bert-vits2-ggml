@@ -46,6 +46,7 @@ jobs:
           sudo apt-get install -y \
             build-essential \
             cmake \
+            glslc \
             glslang-tools \
             jq \
             libvulkan-dev \
