@@ -380,6 +380,7 @@ def _build_bundle(
     )
 
     tts_search_dirs = (
+        tts_build_dir / "bin",
         tts_build_dir / "src",
         tts_build_dir / "ggml" / "src",
         tts_build_dir / "ggml" / "src" / "ggml-vulkan",

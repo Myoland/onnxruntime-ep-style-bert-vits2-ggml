@@ -44,6 +44,24 @@ dist/style-bert-vits2-ggml-runtime-windows-x64/
 
 The Windows wrappers accept the same arguments.
 
+## Windows BuildTools 2026 fallback
+
+The default Windows CMake preset targets Visual Studio 2022. On a machine that
+only has Visual Studio 2026 BuildTools / MSVC v145, run from an x64 developer
+environment and bypass the preset with Ninja:
+
+```bat
+set CMAKE_GENERATOR=Ninja
+uv run python scripts\build_runtime_bundle.py --no-cmake-preset
+```
+
+When reusing an already-built TTS.cpp tree:
+
+```bat
+set CMAKE_GENERATOR=Ninja
+uv run python scripts\build_runtime_bundle.py --no-cmake-preset --reuse-tts-cpp-build --tts-cpp-build-dir build\TTS.cpp-build
+```
+
 ## Build options
 
 The wrappers pass all arguments to `scripts/build_runtime_bundle.py`.
