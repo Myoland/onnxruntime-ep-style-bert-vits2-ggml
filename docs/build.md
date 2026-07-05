@@ -117,7 +117,7 @@ The repository includes a GitHub Actions workflow for publishing the macOS
 arm64 runtime bundle as a GitHub Release asset.
 
 - Workflow: `.github/workflows/release-macos-runtime.yml`
-- Runner: `macos-14`
+- Runner: `macos-26`
 - Bundle: `dist/style-bert-vits2-ggml-runtime-macos-arm64/`
 - Assets: `style-bert-vits2-ggml-runtime-macos-arm64-<tag>.tar.gz` and
   `.sha256`
