@@ -64,15 +64,15 @@ dist/style-bert-vits2-ggml-runtime-linux-x64/
 
 詳細は [docs/build.md](docs/build.md) を参照してください。
 
-## Usage
+## 使い方
 
-This package is consumed by a downstream Style-Bert-VITS2 engine. It does not
-replace the engine entry point by itself. The engine imports this package only
-when GGML is explicitly selected.
+この package は downstream の Style-Bert-VITS2 engine から利用される runtime です。
+それ自体が engine の entry point を置き換えるものではありません。Engine は GGML が
+明示的に選択された場合だけ、この package を import します。
 
-### 1. Get a runtime bundle
+### 1. runtime bundle を取得する
 
-Use a GitHub Release bundle that matches your platform:
+利用する platform に合った GitHub Release bundle を取得します。
 
 ```text
 style-bert-vits2-ggml-runtime-linux-x64-<tag>.tar.gz
@@ -80,13 +80,13 @@ style-bert-vits2-ggml-runtime-macos-arm64-<tag>.tar.gz
 style-bert-vits2-ggml-runtime-windows-x64-<tag>.zip
 ```
 
-For local development, build the bundle yourself:
+local development では、自分で bundle を build できます。
 
 ```bash
 ./build.sh
 ```
 
-The extracted or locally built bundle should contain:
+展開済み、または local build 済みの bundle は次の構成になります。
 
 ```text
 style-bert-vits2-ggml-runtime-<platform>/
@@ -99,35 +99,35 @@ style-bert-vits2-ggml-runtime-<platform>/
         └── libstyle_bert_vits2_ggml_onnx_ep.so / .dylib / .dll
 ```
 
-### 2. Point the engine at the bundle
+### 2. Engine に bundle の場所を渡す
 
-When packaging or running the downstream engine, pass the bundle directory with
-`STYLE_BERT_VITS2_GGML_BUNDLE_DIR`.
+downstream engine を package または実行する際に、`STYLE_BERT_VITS2_GGML_BUNDLE_DIR`
+で bundle directory を渡します。
 
 ```bash
 export STYLE_BERT_VITS2_GGML_BUNDLE_DIR=/path/to/style-bert-vits2-ggml-runtime-linux-x64
 ```
 
-For strict packaging checks, also set:
+packaging 時に bundle が必須であることを検証したい場合は、次も指定します。
 
 ```bash
 export STYLE_BERT_VITS2_GGML_REQUIRED=1
 ```
 
-### 3. Enable GGML in the engine
+### 3. Engine 側で GGML を有効にする
 
-GGML is opt-in. Use the engine's GGML provider option:
+GGML は opt-in です。Engine の GGML provider option を指定します。
 
 ```bash
 uv run python run.py --onnx_provider ggml
 ```
 
-Without `--onnx_provider ggml`, the engine keeps its existing ONNX Runtime
-provider behavior.
+`--onnx_provider ggml` を指定しない場合、Engine は既存の ONNX Runtime provider の
+挙動を維持します。
 
-### 4. Verify the runtime path
+### 4. runtime 経路を検証する
 
-Use the benchmark reproduction script from an engine checkout:
+Engine checkout から benchmark reproduction script を実行します。
 
 ```bash
 ENGINE_DIR=<AivisSpeech-Engine checkout>
@@ -142,16 +142,18 @@ uv run python "$PLUGIN_REPO_DIR/scripts/reproduce_onnx_ggml_benchmark.py" \
   --library-dir "$PLUGIN_BUNDLE_DIR/lib"
 ```
 
-The output `summary.md` and `benchmark.log` should show
-`StyleBertVits2GgmlExecutionProvider` before `CPUExecutionProvider`.
+出力された `summary.md` と `benchmark.log` で、
+`StyleBertVits2GgmlExecutionProvider` が `CPUExecutionProvider` より前にあることを
+確認します。
 
-On Linux NVIDIA cooperative-matrix hardware, confirm that `benchmark.log` shows:
+Linux の NVIDIA cooperative matrix 対応環境では、`benchmark.log` に次の表示がある
+ことを確認します。
 
 ```text
 matrix cores: NV_coopmat2
 ```
 
-If multiple Vulkan devices are visible, pin the device explicitly. For example:
+複数の Vulkan device が見える環境では、device を明示的に固定します。例:
 
 ```bash
 MESA_VK_DEVICE_SELECT=1002:1900! uv run python "$PLUGIN_REPO_DIR/scripts/reproduce_onnx_ggml_benchmark.py" \
