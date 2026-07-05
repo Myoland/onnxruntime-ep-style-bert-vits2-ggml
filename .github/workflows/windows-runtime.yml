@@ -197,6 +197,11 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - name: Download runtime bundle
         uses: actions/download-artifact@v8
         with:
@@ -214,6 +219,9 @@ jobs:
             gh release upload "${TAG_NAME}" release/* --clobber
           else
             gh release create "${TAG_NAME}" release/* \
+              --verify-tag \
               --title "${TAG_NAME}" \
-              --notes "Windows x64 runtime bundle."
+              --notes "Windows x64 runtime bundle." \
+              --prerelease || \
+            gh release upload "${TAG_NAME}" release/* --clobber
           fi
