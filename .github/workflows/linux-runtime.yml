@@ -52,7 +52,9 @@ jobs:
             libvulkan-dev \
             ninja-build \
             patchelf \
-            pkg-config
+            pkg-config \
+            spirv-headers \
+            spirv-tools
 
       - name: Build runtime bundle
         run: ./build.sh
