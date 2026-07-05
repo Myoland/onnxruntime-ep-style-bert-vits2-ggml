@@ -1,0 +1,129 @@
+name: Build Linux Runtime Bundle
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+      - "runtime-linux-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUNDLE_NAME: style-bert-vits2-ggml-runtime-linux-x64
+  CMAKE_BUILD_PARALLEL_LEVEL: "2"
+
+jobs:
+  build-linux:
+    name: Build Linux x64 bundle
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            glslang-tools \
+            jq \
+            libvulkan-dev \
+            ninja-build \
+            patchelf \
+            pkg-config
+
+      - name: Build runtime bundle
+        run: ./build.sh
+
+      - name: Validate runtime bundle
+        run: |
+          set -euo pipefail
+          bundle_dir="dist/${BUNDLE_NAME}"
+          manifest="${bundle_dir}/manifest.json"
+          test -f "${manifest}"
+          test -f "${bundle_dir}/lib/libtts.so"
+          test -f "${bundle_dir}/lib/libggml-vulkan.so"
+          test -f "${bundle_dir}/onnxruntime_ep_style_bert_vits2_ggml/lib/libstyle_bert_vits2_ggml_onnx_ep.so"
+
+          jq -e '.bundle_tag == "linux-x64"' "${manifest}"
+          jq -e '.provider_name == "StyleBertVits2GgmlExecutionProvider"' "${manifest}"
+          jq -e '.tts_cpp_ref | length > 0' "${manifest}"
+
+          ldd "${bundle_dir}/lib/libtts.so"
+          ldd "${bundle_dir}/onnxruntime_ep_style_bert_vits2_ggml/lib/libstyle_bert_vits2_ggml_onnx_ep.so"
+
+          nm -D "${bundle_dir}/onnxruntime_ep_style_bert_vits2_ggml/lib/libstyle_bert_vits2_ggml_onnx_ep.so" | grep 'CreateEpFactories'
+          nm -D "${bundle_dir}/onnxruntime_ep_style_bert_vits2_ggml/lib/libstyle_bert_vits2_ggml_onnx_ep.so" | grep 'ReleaseEpFactory'
+
+      - name: Package runtime bundle
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME}"
+          else
+            version="${GITHUB_SHA::12}"
+          fi
+          archive="${BUNDLE_NAME}-${version}.tar.gz"
+          tar -C dist -czf "release/${archive}" "${BUNDLE_NAME}"
+          sha256sum "release/${archive}" > "release/${archive}.sha256"
+          ls -lh release
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-runtime-bundle
+          path: release/*
+          if-no-files-found: error
+          retention-days: 5
+
+  release-linux:
+    name: Publish Linux release asset
+    runs-on: ubuntu-24.04
+    needs: build-linux
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download runtime bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-runtime-bundle
+          path: release
+
+      - name: Publish release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          ls -lh release
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            gh release upload "${TAG_NAME}" release/* --clobber
+          else
+            gh release create "${TAG_NAME}" release/* \
+              --title "${TAG_NAME}" \
+              --notes "Linux x64 runtime bundle."
+          fi
